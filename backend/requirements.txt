@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+httpx
+websockets>=13
+python-dotenv
+certifi
