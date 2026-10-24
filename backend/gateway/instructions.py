@@ -100,10 +100,16 @@ async def build_briefing(
     return "\n\n".join(sections)
 
 
-def build_instructions(role: Role, briefing: str) -> str:
+def build_instructions(role: Role, briefing: str, *, greeted: bool = False) -> str:
     # The greeting lives here, not on the first response.create: per-response instructions
     # make Higgs Realtime ignore tools later in the call (see realtime-findings.md).
-    call_start = f"## Call start\nThe user just called you. {greeting_instructions(role)}"
+    # Once it's said, the section is swapped out: left in, the model often answers the user's
+    # first question with the greeting again (especially when they talk over it).
+    if greeted:
+        call_start = ("## Call in progress\nYou already answered the call with your greeting. "
+                      "Don't greet again; answer what the user says.")
+    else:
+        call_start = f"## Call start\nThe user just called you. {greeting_instructions(role)}"
     return "\n\n".join([role.persona.strip(), SPEAKING_STYLE, TOOL_RULES, briefing, call_start])
 
 

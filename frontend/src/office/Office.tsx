@@ -169,7 +169,9 @@ export function Office({
   else if (near?.kind === "board") hint = "E: open the whiteboard";
 
   return (
-    <div className="office-wrap">
+    // Pinned to the map's width: otherwise the keybar's hint (which changes as you walk) sizes the
+    // column and the whole stage shifts sideways.
+    <div className="office-wrap" style={{ width: MAP_WIDTH * TILE }}>
       <div className="office" style={{ width: MAP_WIDTH * TILE, height: MAP_HEIGHT * TILE }}>
         {OFFICE_MAP.flatMap((row, y) =>
           [...row].map((c, x) => (

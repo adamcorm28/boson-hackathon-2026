@@ -111,6 +111,7 @@ class CallSession:
         self._continuing = False  # tool output sent, waiting for the follow-up response
         self._inflight: TaskResult | None = None  # injected, awaiting its response.created
         self._reason = "ended"
+        self._after_greeting: str | None = None  # instructions to switch to once the greeting is said
         self._delegated_this_turn = False  # delegate_task ran since the user last spoke
         self._nudged_this_turn = False
         self._lookup_nudged_this_turn = False
@@ -134,6 +135,7 @@ class CallSession:
             briefing = await build_briefing(
                 self.role, self.ctx.company, self.memory.recent_summaries(), pending, self.ctx.roles)
             instructions = build_instructions(self.role, briefing)
+            self._after_greeting = build_instructions(self.role, briefing, greeted=True)
             self.queue.discard({r.task_id for r in pending})  # the briefing delivers them
 
             if self.live is not None:  # in parallel with the voice session: the avatar takes ~2 s to join
@@ -339,6 +341,9 @@ class CallSession:
                 if self.live is not None:
                     self.live.end_reply()
                 await self._to_client({"type": "agent.speaking", "value": False})
+                if self._after_greeting is not None:  # the first response is the greeting
+                    await self._send_upstream(self._session_update(self._after_greeting))
+                    self._after_greeting = None
                 ran_tools = await self._run_function_calls(resp)
                 if not ran_tools:
                     await self._guard_claims()

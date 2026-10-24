@@ -154,6 +154,23 @@ async def test_first_messages_are_session_update_then_greeting(harness, roles):
     await harness.task
 
 
+async def test_greeting_section_swapped_out_after_the_greeting(harness, roles):
+    harness.make("eng_lead")
+    await started(harness)
+    assert roles["eng_lead"].greeting in harness.upstream.sent[0]["session"]["instructions"]
+    for _ in range(2):  # the greeting, then a later reply: only the first swaps the instructions
+        harness.upstream.feed({"type": "response.done", "response": {"output": [{"type": "message"}]}})
+    await until(lambda: harness.client.types().count("agent.speaking") >= 2)
+    await asyncio.sleep(0.02)
+    updates = [e for e in harness.upstream.sent if e["type"] == "session.update"]
+    assert len(updates) == 2
+    after = updates[1]["session"]["instructions"]
+    assert roles["eng_lead"].greeting not in after and "already answered the call" in after
+    assert updates[1]["session"]["tools"] == updates[0]["session"]["tools"]
+    harness.client.disconnect()
+    await harness.task
+
+
 async def test_audio_delta_forwarded_as_binary(harness):
     harness.make()
     await started(harness)
@@ -223,7 +240,7 @@ async def test_server_executor_call_ignored(harness):
     }]}})
     await until(lambda: {"type": "agent.speaking", "value": False} in harness.client.json)
     await asyncio.sleep(0.02)
-    assert len(harness.upstream.sent) == n
+    assert harness.upstream.types()[n:] == ["session.update"]  # only the post-greeting swap, no answer
     harness.client.disconnect()
     await harness.task
 
