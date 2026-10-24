@@ -1,8 +1,10 @@
-// Temporary test panel for the gateway (mock or real). No audio playback or mic yet (C3):
-// "Talk" sends silent fake mic audio, "Interrupt" sends a loud frame.
+// Temporary test panel for the gateway (mock or real). Plays the agent's audio; "Mic on" streams
+// your real mic. "Talk 2 s" sends silent fake mic audio, "Interrupt" sends one loud frame.
 import { useEffect, useRef, useState } from "react";
 import { gateway, GATEWAY_URL, USE_MOCK } from "../api";
 import type { MockGateway } from "../api/mock";
+import { MicBlockedError, startMic, type Mic } from "../audio/mic";
+import { createPlayer, type Player } from "../audio/player";
 import {
   BOARD_COLUMNS,
   CLOSE_ALREADY_ON_CALL,
@@ -44,7 +46,11 @@ export function DevPanel() {
   const [completed, setCompleted] = useState<string[]>([]);
   const [result, setResult] = useState<{ task: TaskDetail; diff: string | null } | null>(null);
   const [call, setCall] = useState<CallView | null>(null);
+  const [micOn, setMicOn] = useState(false);
+  const [micError, setMicError] = useState<string | null>(null);
   const callRef = useRef<CallSocket | null>(null);
+  const audioRef = useRef<{ ctx: AudioContext; player: Player } | null>(null);
+  const micRef = useRef<Mic | null>(null);
 
   const addLog = (text: string) =>
     setLog((prev) => [{ id: logId++, at: new Date().toLocaleTimeString(), text }, ...prev].slice(0, 40));
@@ -76,6 +82,11 @@ export function DevPanel() {
       return;
     }
     callRef.current = sock;
+    // Created inside the click handler so the browser lets it play.
+    const ctx = new AudioContext();
+    const player = createPlayer(ctx);
+    audioRef.current = { ctx, player };
+    setMicError(null);
     const name = role.name.split(" ")[0];
     setCall({ roleId: role.id, name, status: "connecting", lines: [], partial: "", speaking: false, audioBytes: 0 });
 
@@ -92,6 +103,7 @@ export function DevPanel() {
         case "transcript.user":
           return update((c) => ({ ...c, lines: [...c.lines, `You: ${e.text}`] }));
         case "barge_in":
+          player.stop();
           return update((c) => ({
             ...c,
             partial: "",
@@ -107,12 +119,38 @@ export function DevPanel() {
           return;
       }
     });
-    sock.onAudio((pcm) => update((c) => ({ ...c, audioBytes: c.audioBytes + pcm.byteLength })));
+    sock.onAudio((pcm) => {
+      player.enqueue(pcm);
+      update((c) => ({ ...c, audioBytes: c.audioBytes + pcm.byteLength }));
+    });
     sock.onClose((code) => {
       if (callRef.current === sock) callRef.current = null;
+      stopMic();
+      player.stop();
+      void ctx.close();
+      audioRef.current = null;
       addLog(`CALL closed with code ${code}`);
       update((c) => ({ ...c, status: `closed (${code})`, speaking: false }));
     });
+  }
+
+  function stopMic() {
+    micRef.current?.stop();
+    micRef.current = null;
+    setMicOn(false);
+  }
+
+  function toggleMic() {
+    if (micRef.current) return stopMic();
+    startMic((frame) => callRef.current?.sendAudio(frame)).then(
+      (mic) => {
+        if (!callRef.current) return mic.stop(); // the call ended while we waited for permission
+        micRef.current = mic;
+        setMicOn(true);
+        setMicError(null);
+      },
+      (err: unknown) => setMicError(err instanceof MicBlockedError ? err.message : `Mic error: ${String(err)}`),
+    );
   }
 
   function talk(seconds: number) {
@@ -141,12 +179,15 @@ export function DevPanel() {
     <main className="dev">
       <h1>Dunder Mifflin Infinity Voice™: gateway test panel</h1>
       <p className="muted">
-        Gateway: {USE_MOCK ? "mock (VITE_MOCK=1)" : GATEWAY_URL}. No sound yet: audio arrives as a byte count until C3.
+        Gateway: {USE_MOCK ? "mock (VITE_MOCK=1)" : GATEWAY_URL}. Use headphones: otherwise the mic hears the speakers.
       </p>
       {USE_MOCK && (
         <ol className="muted steps">
-          <li>Click Call next to anyone and wait for the greeting.</li>
-          <li>Click "Talk 2 s": they delegate "Fix bulk discount" to Dwight and a card appears in todo.</li>
+          <li>Click Call next to anyone and wait for the greeting (you should hear it).</li>
+          <li>
+            Click "Mic on" and speak for ~2 s (or click "Talk 2 s"): they delegate "Fix bulk discount" to Dwight and a
+            card appears in todo. Speak up while they talk to interrupt: the audio should cut out at once.
+          </li>
           <li>Watch it move to in_progress, then done ~10 s later, with a ping in the log.</li>
           <li>Click "Open result" to see the summary and diff.</li>
         </ol>
@@ -184,7 +225,11 @@ export function DevPanel() {
                 ))}
                 {call.partial && <div className="muted">{call.name}: {call.partial}</div>}
               </div>
+              {micError && <p className="error">{micError}</p>}
               <p>
+                <button disabled={!live} onClick={toggleMic}>
+                  {micOn ? "🎤 Mic off" : "Mic on"}
+                </button>{" "}
                 <button disabled={!live} onClick={() => talk(2)}>Talk 2 s</button>{" "}
                 <button disabled={!live} onClick={interrupt}>Interrupt</button>{" "}
                 <button disabled={!live} onClick={() => callRef.current?.hangup()}>Hang up</button>{" "}

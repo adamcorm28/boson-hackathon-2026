@@ -67,7 +67,7 @@ const T = { connect: 300, pickUp: 1500, work: 10_000, chunkInterval: 50 };
 const BYTES_PER_SECOND = 24_000 * 2; // PCM16 mono 24 kHz
 const TRIGGER_BYTES = 2 * BYTES_PER_SECOND; // ~2 s of mic audio after the greeting
 const CHUNK_BYTES = BYTES_PER_SECOND / 10; // 100 ms frames, sent every 50 ms (2x real time, like a real server)
-const BARGE_IN_RMS = 0.1;
+const BARGE_IN_RMS = 0.05; // normal speech on a real mic with auto-gain
 
 export interface MockOptions {
   /** Speeds up every timer, e.g. 10 = ten times faster. */
