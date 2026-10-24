@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { gateway } from "./api";
 import type { Board, Role } from "./api/types";
+import { boardReducer } from "./board/boardReducer";
+import { Whiteboard } from "./board/Whiteboard";
 import { CallWindow } from "./call/CallWindow";
 import { useCall } from "./call/useCall";
 import { DevPanel } from "./dev/DevPanel";
@@ -8,7 +10,8 @@ import { Hud } from "./office/Hud";
 import { Office } from "./office/Office";
 import { initialOfficeState, officeReducer } from "./office/officeReducer";
 import { ResultViewer } from "./results/ResultViewer";
-import { useOverlayKeys } from "./ui/useOverlayKeys";
+
+const MOVED_HIGHLIGHT_MS = 2500;
 
 // The gateway test panel lives at ?dev
 export default function App() {
@@ -18,6 +21,7 @@ export default function App() {
 function OfficeApp() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [board, setBoard] = useState<Board | null>(null);
+  const [justMoved, setJustMoved] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [boardOpen, setBoardOpen] = useState(false);
   const [resultTaskId, setResultTaskId] = useState<string | null>(null);
@@ -35,19 +39,27 @@ function OfficeApp() {
         },
         (e: unknown) => setError(String(e)),
       );
-    // Until the board reducer (C7), refetch the board whenever a card changes.
     const loadBoard = () => gateway.fetchBoard().then(setBoard, () => {});
     loadRoles();
     loadBoard();
     return gateway.subscribe((e) => {
       officeDispatch(e);
-      if (e.type === "task.updated") loadBoard();
+      if (e.type === "task.updated") {
+        setBoard((b) => (b ? boardReducer(b, e) : b));
+        setJustMoved(e.task_id);
+      }
       if (e.type === "resync") {
         loadRoles();
         loadBoard();
       }
     });
   }, []);
+
+  useEffect(() => {
+    if (!justMoved) return;
+    const t = setTimeout(() => setJustMoved(null), MOVED_HIGHLIGHT_MS);
+    return () => clearTimeout(t);
+  }, [justMoved]);
 
   // A monitor glows when the agent has an in-progress card, even before any agent.status event
   // (e.g. work that was already running when the page loaded).
@@ -72,9 +84,6 @@ function OfficeApp() {
     setResultTaskId(taskId);
   }, []);
   const dismissToast = useCallback((id: string) => officeDispatch({ type: "dismiss_toast", id }), []);
-
-  // Temporary board overlay until the whiteboard lands (C7).
-  useOverlayKeys(boardOpen, () => setBoardOpen(false), ["b"]);
 
   return (
     <main className="app">
@@ -107,15 +116,18 @@ function OfficeApp() {
       </div>
 
       {boardOpen && (
-        <div className="overlay">
-          <div className="overlay-card">
-            <h2>Whiteboard</h2>
-            <p className="muted">The Kanban board arrives in C7. Press B or Esc to close.</p>
-          </div>
-        </div>
+        <Whiteboard
+          board={board}
+          roles={roles}
+          justMoved={justMoved}
+          onOpenCard={openResult}
+          onClose={() => setBoardOpen(false)}
+        />
       )}
 
-      {resultTaskId && <ResultViewer gateway={gateway} taskId={resultTaskId} onClose={() => setResultTaskId(null)} />}
+      {resultTaskId && (
+        <ResultViewer gateway={gateway} roles={roles} taskId={resultTaskId} onClose={() => setResultTaskId(null)} />
+      )}
 
       <CallWindow state={call.state} roles={roles} talking={call.talking} onHangup={call.hangup} onRetryMic={call.retryMic} />
     </main>
