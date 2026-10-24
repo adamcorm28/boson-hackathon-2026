@@ -3,7 +3,13 @@
 __pycache__/
 *.pyc
 artifacts/
-backend/data/
+# Per-machine data (calls, voice ids, live avatar ids). Tracked: the voice recordings and avatar
+# photos, so teammates can clone the same voices and faces; never the rendered loop cache.
+backend/data/*
+!backend/data/voices/
+!backend/data/avatars/
+backend/data/avatars/cache/
+backend/data/avatars/old/
 backend/company/data/paperclip_ids.json
 .superpowers/
 backend/spikes/out/
