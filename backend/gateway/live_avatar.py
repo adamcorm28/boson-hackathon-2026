@@ -31,8 +31,9 @@ SAMPLE_RATE = 24000
 MAX_DURATION_S = int(os.getenv("LIVE_AVATAR_MAX_SECONDS", "900"))
 START_TIMEOUT_S = 30
 # Avatar slots are shared by every Boson user; when all are busy, keep trying this long before the
-# call falls back to plain audio (the greeting waits meanwhile).
-BUSY_RETRY_S = float(os.getenv("LIVE_AVATAR_BUSY_RETRY_SECONDS", "15"))
+# call falls back to plain audio. The greeting waits meanwhile, so keep it short: long enough for the
+# previous call's slot to free up on back-to-back calls, not a long silence when Boson is full.
+BUSY_RETRY_S = float(os.getenv("LIVE_AVATAR_BUSY_RETRY_SECONDS", "5"))
 _FLUSH = object()  # queue marker: end of one reply
 
 
