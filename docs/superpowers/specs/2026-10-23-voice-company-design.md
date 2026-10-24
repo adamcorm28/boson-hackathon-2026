@@ -147,18 +147,57 @@ Every role also gets `lookup_company(topic)`, which searches the handbook. `chlo
 
 Mocks stay behind tool functions, so a real connector (AgentMail, HubSpot, Stripe) can replace one later without changing the voice layer.
 
-## 7. UI (React + Vite + TS)
+## 7. UI: retro arcade office (direction leaning, not final)
 
-- **Directory:** org chart cards with name, title, status dot (idle / working) and an unread-ping badge. Click a card to call.
-- **Call screen (Zoom-like):**
-  - large tile with the persona's initials or photo and a speaking waveform
-  - live transcript
-  - "tasks started this call" chips
-  - hang-up button
-  - picture-in-picture "you" tile (optional)
-- **Board panel:** Kanban columns built from Paperclip issue statuses. Updates live over SSE, so cards move while you talk.
-- **Toasts:** pop up when a task finishes. Clicking one opens a **result viewer**: the RESULT summary plus the artifact (PR or diff, `.pptx` download, `.xlsx` download).
-- **Audio:** an AudioWorklet captures at 24 kHz PCM16 and plays assistant audio back. Local playback stops on `speech_started` (barge-in).
+The office is a top-down pixel-art floor with one cubicle per employee. You walk your character over to a cubicle and press a key to start a call. The call opens as a retro-styled video-call window over the office.
+
+- **Office map:** cubicles are generated from `GET /roles`, so a new role gets a desk automatically. Each role's YAML can carry an optional `desk` position and `sprite`; otherwise desks are auto-placed.
+- **Cubicle state is visible at a glance**, driven by SSE:
+  - monitor glowing or typing animation: the agent has an `in_progress` task
+  - "!" bubble over the employee: they have a finished result for you
+  - phone-ringing icon: someone pinged while you're on another call
+- **Call window:** pixel portrait with a talking animation and waveform, live transcript, chips for "tasks started this call", and hang-up (Esc). Walking away also hangs up.
+- **Kanban board:** a whiteboard on the office wall. Walk up to it, or press B, to open the full board. A minimap version can stay on the HUD so the audience sees cards move during calls.
+- **Pings and results:** a toast in arcade style ("JAKE: fix is done!"). Opening it shows the result viewer, framed as a monitor or printout: the RESULT summary plus the PR/diff, `.pptx` or `.xlsx`.
+- **Audio:** an AudioWorklet captures at 24 kHz PCM16 and plays assistant audio back. Local playback stops on the `barge_in` event.
+- **Engine:** up to the frontend owner. Cheap options are Phaser 3 or KAPLAY inside React, or plain React with a CSS tile grid. Walking only needs arrow keys and collision with walls.
+
+## 7a. Interface contracts between workstreams
+
+These let all three streams start at once against mocks.
+
+**Frontend ↔ Voice gateway** (owned by A, mocked by C until it's ready)
+- `GET /roles`: `[{id, name, title, reports_to, voice, sprite?, desk?}]`
+- `GET /board`: `{columns: {backlog: [...], todo: [...], in_progress: [...], in_review: [...], blocked: [...], done: [...]}}`. Each card is `{task_id, title, assignee_role, status, origin}`.
+- `GET /tasks/{task_id}`: `{task_id, title, assignee_role, status, result_summary, artifacts: [{kind: "pr"|"diff"|"pptx"|"xlsx"|"link", url, label}]}`
+- `GET /events` (SSE):
+  - `agent.status {role, state: "idle"|"working"|"on_call"}`
+  - `task.updated {task_id, status, assignee_role, title}`
+  - `task.completed {task_id, from_role, title, summary}`
+  - `ping {to_role|null, from_role, task_id, text}`
+- `WS /call/{role_id}`:
+  - Client → server: binary frames of PCM16 24 kHz mono mic audio, or the JSON `{type: "hangup"}`.
+  - Server → client: binary frames of PCM16 24 kHz assistant audio, plus these JSON events:
+    - `call.started {role}`
+    - `transcript.user {text}`
+    - `transcript.assistant.delta {text}`
+    - `transcript.assistant.done {text}`
+    - `agent.speaking {value: bool}`
+    - `barge_in`
+    - `tool.called {name, args}`
+    - `task.started {task_id, title, assignee_role}`
+    - `call.ended {reason}`
+
+**Voice gateway ↔ Company layer** (owned by B as the Python package `backend/company/`, consumed by A)
+- `paperclip_client.py`:
+  - `list_issues(role=None, status=None)`
+  - `get_issue(task_id)`, which includes comments
+  - `create_task(assignee_role, title, brief, requested_by_role) -> task_id`
+  - `get_agent_status(role)`
+  - `get_costs()`
+- `data_tools.py`: pure functions returning dicts, such as `company_overview()`, `get_pipeline()`, `get_deal(name)`, `get_financials()`, `read_inbox()`, `read_email(id)` and `lookup_company(topic)`.
+- **A mock implementation (in-memory, backed by the seed JSON) ships first**, so A never waits on Paperclip. B then swaps in the real client behind the same functions.
+- A owns the tool **schemas** and the router. B owns what the tools **return**.
 
 ## 8. Demo storyline (5 min, recorded, editable)
 1. **CEO:** "Give me the state of the company." Gets KPIs, Q4 progress, and "Oliver flagged a checkout bug that's blocking Acme Dental, and you have an investor email waiting."
@@ -175,10 +214,33 @@ Mocks stay behind tool functions, so a real connector (AgentMail, HubSpot, Strip
 - **S2:** the §5.4 injection flow. Delegate, wait 20 s, then inject; check that it is spoken naturally and nothing gets cut off. Test the fallback if needed.
 - **S3:** Paperclip is running, a `claude_local` agent is assigned an issue over REST, and it posts a `RESULT:` comment.
 
-**Workstreams (three people):**
-- **A. Voice gateway:** `CallSession`, the tool router, the instruction builder, injection, the EventBus, SSE, call memory.
-- **B. Company and agents:** the Paperclip seed script, `AGENTS.md` for each role, the seed data, the `kestrel-book` repo with its bug, and the work-body skills (pptx, xlsx).
-- **C. Frontend and demo:** directory, call screen, audio, board, toasts and result viewer, then the demo script and recording.
+**Workstreams (three people). Each owns one spike:**
+- **A. Voice (S1, S2):**
+  - `CallSession`, which replaces the blind relay
+  - tool schemas and router
+  - instruction builder: persona plus live briefing
+  - result injection and the cross-team ping queue
+  - EventBus, SSE, call memory
+  - the endpoints in §7a
+- **B. Paperclip and architecture (S3):**
+  - Paperclip install and the seed script
+  - each role's `AGENTS.md` (work-body instructions, including the `RESULT:` convention)
+  - role YAMLs (personas, voices) and the `company/` seed data
+  - `backend/company/` (mock first, then real)
+  - the `kestrel-book` repo with its bug and failing test
+  - the pptx/xlsx skills
+  - TaskWatcher polling
+- **C. Frontend:**
+  - arcade office, movement and cubicles
+  - call window and audio worklet
+  - wall board, toasts and pings, result viewer
+  - builds against a mock gateway (a fake WS that plays a WAV, plus fake SSE) until A is ready
+  - then the demo script and recording
+
+**Integration checkpoints:**
+- ~1:00 AM: a real voice call works in the arcade, with a mock company.
+- ~8:00 AM: Paperclip is wired in end to end and the delegate → ping loop works.
+- ~11:00 AM: feature freeze, then rehearse the storyline.
 
 **Freeze features about 11:00 AM Saturday, and record by about 1:30 PM.**
 
