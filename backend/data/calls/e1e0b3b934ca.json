@@ -1,0 +1,67 @@
+{
+  "call_id": "e1e0b3b934ca",
+  "role": "sales_lead",
+  "role_name": "Jim Halpert",
+  "started_at": 1792857554.682118,
+  "ended_at": 1792857628.504621,
+  "transcript": [
+    [
+      "sales_lead",
+      "Hey, it's Jim. What's up?"
+    ],
+    [
+      "user",
+      "Hey Jim, I saw a notification over your desk. What's up?"
+    ],
+    [
+      "sales_lead",
+      "Yeah, that's the Lackawanna County quote. It's on hold because of a checkout bug that overcharged Maria Delgado. I've already got a plan to refund her and lock in the bulk rate, so we're good to move forward."
+    ],
+    [
+      "user",
+      "Okay, so what do we have to do with Maria Delgado?"
+    ],
+    [
+      "sales_lead",
+      "We need to refund Maria Delgado two hundred seventy dollars for the overcharge, lock the bulk rate into the contract, and route her future orders through me to avoid the bug."
+    ],
+    [
+      "user",
+      "Okay, great. Let's do all three of those. Can we delegate those to the right people?"
+    ],
+    [
+      "sales_lead",
+      "I'll get that started for you. I'm assigning the refund to the sales lead, the contract update to the sales lead, and the order routing to the sales lead. They'll handle it right away."
+    ],
+    [
+      "sales_lead",
+      "Done, all three are started."
+    ],
+    [
+      "user",
+      "You are the sales lead, right?"
+    ],
+    [
+      "sales_lead",
+      "Yeah, that's me. I'm handling the refund, the contract update, and the order routing right now."
+    ],
+    [
+      "user",
+      "Okay. Let me know when you're done."
+    ],
+    [
+      "sales_lead",
+      "Will do. I'll ping you as soon as all three are wrapped up."
+    ],
+    [
+      "sales_lead",
+      "Done, I've started it."
+    ]
+  ],
+  "touched_task_ids": [
+    "DUN-20",
+    "DUN-21",
+    "DUN-22"
+  ],
+  "summary": "sales_lead: Done, all three are started. / user: You are the sales lead, right? / sales_lead: Yeah, that's me. I'm handling the refund, the contract update, and the order routing right now. / user: Okay. Let me know when you're done. / sales_lead: Will do. I'll ping you as soon as all three are wrapped up. / sales_lead: Done, I've started it."
+}

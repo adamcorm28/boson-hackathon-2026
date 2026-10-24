@@ -1,0 +1,31 @@
+{
+  "call_id": "f43abde991f6",
+  "role": "cfo",
+  "role_name": "Kevin Malone",
+  "started_at": 1792857886.244981,
+  "ended_at": 1792857911.26985,
+  "transcript": [
+    [
+      "cfo",
+      "Hi. It's Kevin. From accounting. How can I help you today?"
+    ],
+    [
+      "user",
+      "Hey Kevin, what are you working on?"
+    ],
+    [
+      "cfo",
+      "I'm working on the Q4 numbers for David Wallace, and I also have the October expense reports to reconcile. Oh, and I've got the office party budget sitting in my backlog too."
+    ],
+    [
+      "user",
+      "Weird."
+    ],
+    [
+      "cfo",
+      "I'm also keeping an eye on the Infinity checkout bug that was blocking the Lackawanna County quote, but that's all squared away now."
+    ]
+  ],
+  "touched_task_ids": [],
+  "summary": "cfo: Hi. It's Kevin. From accounting. How can I help you today? / user: Hey Kevin, what are you working on? / cfo: I'm working on the Q4 numbers for David Wallace, and I also have the October expense reports to reconcile. Oh, and I've got the office party budget sitting in my backlog too. / user: Weird. / cfo: I'm also keeping an eye on the Infinity checkout bug that was blocking the Lackawanna County quote, but that's all squared away now."
+}
