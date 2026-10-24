@@ -5,7 +5,7 @@ from dataclasses import asdict
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
 
-from company.types import CompanyUnavailable
+from company.types import CompanyUnavailable, TaskResult
 from gateway import app_state, company_compat
 from gateway.call_session import CallSession
 from gateway.events import sse_stream
@@ -93,3 +93,22 @@ async def call(ws: WebSocket, role_id: str):
             await ws.close()
         except (RuntimeError, WebSocketDisconnect):
             pass  # already closed by the browser
+
+
+@router.post("/dev/complete/{task_id}")
+async def dev_complete(task_id: str, summary: str = "Done. All tests pass."):
+    """Mock company only: finish a task as if its agent posted RESULT, to rehearse pings."""
+    complete = getattr(app_state.company, "complete", None)
+    if complete is None:
+        raise HTTPException(404, "Only available with COMPANY_BACKEND=mock")
+    try:
+        issue = await app_state.company.get_issue(task_id)
+    except KeyError:
+        raise HTTPException(404, f"Unknown task {task_id}")
+    complete(task_id, summary)
+    if app_state.watcher is None:  # no watcher yet (B9): announce directly
+        await app_state.on_complete(TaskResult(
+            task_id=task_id, title=issue.title, from_role=issue.assignee_role or "",
+            requested_by_role=issue.requested_by_role, summary=summary,
+        ))
+    return {"ok": True}

@@ -26,6 +26,7 @@ from pydantic import BaseModel
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 # Imported after load_dotenv: the gateway reads COMPANY_BACKEND / ROLES_DIR at import.
+from gateway import app_state as gateway_app_state  # noqa: E402
 from gateway import http as gateway_http  # noqa: E402
 
 BOSON_API_KEY = os.environ["BOSON_API_KEY"]
@@ -64,8 +65,14 @@ app.mount("/artifacts", StaticFiles(directory=ARTIFACTS_DIR), name="artifacts")
 client = httpx.AsyncClient(headers=AUTH_HEADERS, timeout=120)
 
 
+@app.on_event("startup")
+async def start_gateway():
+    await gateway_app_state.start_watcher()
+
+
 @app.on_event("shutdown")
 async def close_client():
+    await gateway_app_state.stop_watcher()
     await client.aclose()
 
 

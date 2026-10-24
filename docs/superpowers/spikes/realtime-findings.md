@@ -34,3 +34,8 @@ Run on 2026-10-23 with `backend/spikes/realtime_spike.py`. Raw event logs, WAVs 
 - Function calls appear in `response.done.response.output[]` as `{type: "function_call", call_id, name, arguments, status, executor: "client"}`. **The `executor` field is present.**
 - No `error` events were seen, and no idle timeout was hit in these short runs.
 - The model said "Task DM-900 is started" without the persona rule, which confirms the "never read out IDs" instruction is needed.
+
+## Found later, during A7 (live calls through the gateway)
+- **Per-response `instructions` on the greeting also break tool use for the rest of the call.** With them, `delegate_task` fired in about 1 of 3 runs; without them, 3 of 3. The greeting line now lives in a "Call start" section of the session instructions, and the first `response.create` is bare. **Rule: never send `instructions` on any `response.create`.**
+- The model will claim work is delegated without calling the tool if anything in the prompt suggests it already was (for example, raw call notes saying "Dwight's on it"). The briefing now says past-call notes don't count as delegation, and the tool rules spell out that short go-aheads ("do it") mean "call delegate_task now".
+- The model still sometimes answers from imagination instead of calling a tool (for example, inventing a deal). This is rare; plan for retakes when recording.
