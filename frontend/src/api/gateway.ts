@@ -2,6 +2,7 @@
 import {
   CALL_EVENT_TYPES,
   SSE_EVENT_TYPES,
+  type AgentStatusDetail,
   type Board,
   type CallEvent,
   type CallSocket,
@@ -94,6 +95,7 @@ export function createGateway(baseUrl: string, deps: GatewayDeps = {}): Gateway 
     fetchRoles: () => getJson<Role[]>("/roles"),
     fetchBoard: () => getJson<Board>("/board"),
     fetchTask: (id) => getJson<TaskDetail>(`/tasks/${encodeURIComponent(id)}`),
+    fetchAgentStatus: (roleId) => getJson<AgentStatusDetail>(`/roles/${encodeURIComponent(roleId)}/status`),
 
     subscribe(onEvent) {
       let source: EventSourceLike | null = null;

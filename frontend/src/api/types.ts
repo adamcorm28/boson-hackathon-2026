@@ -33,6 +33,8 @@ export interface Role {
   voice: string;
   sprite?: string | null;
   desk?: string | null; // named spot, e.g. "jim_desk"; missing/unknown = auto-placed
+  /** What they're responsible for, shown on the contact profile (optional). */
+  responsibilities?: string[];
   /** Still face from backend/data/avatars/; when set, the call shows it instead of the pixel portrait. */
   avatar_url?: string | null;
   /** Muted talking clip of that face, looped while the agent speaks (null in the gateway's sync mode). */
@@ -49,6 +51,15 @@ export interface Card {
   assignee_role: string | null;
   status: Status;
   origin: "voice" | "seed";
+}
+
+/** GET /roles/{role_id}/status: what someone is doing right now. */
+export interface AgentStatusDetail {
+  role: string;
+  state: "idle" | "working";
+  current_task_id: string | null;
+  /** The latest note on their current task, e.g. a progress update. */
+  last_comment: string | null;
 }
 
 /** GET /board. The gateway sends every column key, even when empty. */
@@ -146,6 +157,7 @@ export interface Gateway {
   fetchRoles(): Promise<Role[]>;
   fetchBoard(): Promise<Board>;
   fetchTask(id: string): Promise<TaskDetail>;
+  fetchAgentStatus(roleId: string): Promise<AgentStatusDetail>;
   /** Returns an unsubscribe function. */
   subscribe(onEvent: (e: ServerEvent) => void): () => void;
   /** video: a video call with the role's live avatar (the gateway sends `avatar.room`). */

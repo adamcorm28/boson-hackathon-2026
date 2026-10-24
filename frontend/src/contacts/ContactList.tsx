@@ -1,18 +1,15 @@
-// Classic mode: a contact list instead of the walkable office.
-// Click someone to call, or ↑/↓ (W/S) to pick and Enter (E) to call. B opens the task board.
-import { useEffect, useMemo, useRef, useState } from "react";
-import type { AgentState, Board, Role } from "../api/types";
+// Classic mode's contact list. Click someone (or ↑/↓) to see their profile; Enter, double-click or
+// the phone button calls them. B opens the task board.
+import { useEffect, useRef } from "react";
+import type { Role } from "../api/types";
 import { Avatar } from "../ui/Avatar";
-import { buildContacts, moveSelection, type ContactStatus } from "./contacts";
+import { moveSelection, type Contact, type ContactStatus } from "./contacts";
 
 interface Props {
   roles: Role[];
-  board: Board | null;
-  agents: Record<string, AgentState>;
-  bang: Record<string, string[]>;
-  ringing: Record<string, boolean>;
-  /** The role on the line, while a call is connecting or live. */
-  onLine: string | null;
+  contacts: Contact[];
+  selectedId: string | null;
+  onSelect(roleId: string): void;
   /** Ignore the keyboard (title card, overlays or a call are open). */
   paused: boolean;
   onDial(roleId: string): void;
@@ -24,16 +21,16 @@ const UP = new Set(["ArrowUp", "w"]);
 const DOWN = new Set(["ArrowDown", "s"]);
 const CALL = new Set(["Enter", "e"]);
 
-const PRESENCE: Record<ContactStatus, string> = {
+export const PRESENCE: Record<ContactStatus, string> = {
   idle: "Available",
   working: "Working",
   on_call: "On a call",
   busy: "On a call",
 };
 
-function PhoneIcon() {
+export function PhoneIcon({ size = 18 }: { size?: number }) {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden>
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden>
       <path
         fill="currentColor"
         d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.6a1 1 0 0 1-.25 1z"
@@ -42,30 +39,25 @@ function PhoneIcon() {
   );
 }
 
-export function ContactList({ roles, board, agents, bang, ringing, onLine, paused, onDial, onOpenBoard, onOpenResult }: Props) {
-  const contacts = useMemo(
-    () => buildContacts(roles, { agents, bang, ringing, board, onLine }),
-    [roles, agents, bang, ringing, board, onLine],
-  );
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+export function ContactList({ roles, contacts, selectedId, onSelect, paused, onDial, onOpenBoard, onOpenResult }: Props) {
   const found = contacts.findIndex((c) => c.roleId === selectedId);
   const index = found >= 0 ? found : 0;
   const rowRefs = useRef(new Map<string, HTMLLIElement>());
   const avatarOf = (id: string) => roles.find((r) => r.id === id)?.avatar_url ?? null;
 
   // Latest values for the key handler, which is registered once.
-  const live = useRef({ contacts, index, paused, onDial, onOpenBoard });
-  live.current = { contacts, index, paused, onDial, onOpenBoard };
+  const live = useRef({ contacts, index, paused, onDial, onOpenBoard, onSelect });
+  live.current = { contacts, index, paused, onDial, onOpenBoard, onSelect };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const { contacts, index, paused, onDial, onOpenBoard } = live.current;
+      const { contacts, index, paused, onDial, onOpenBoard, onSelect } = live.current;
       if (paused || e.metaKey || e.ctrlKey || e.altKey) return;
       const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
       if (UP.has(key) || DOWN.has(key)) {
         e.preventDefault();
         const next = moveSelection(index, UP.has(key) ? -1 : 1, contacts.length);
-        if (contacts[next]) setSelectedId(contacts[next].roleId);
+        if (contacts[next]) onSelect(contacts[next].roleId);
       } else if (CALL.has(key) && !e.repeat) {
         e.preventDefault();
         if (contacts[index]) onDial(contacts[index].roleId);
@@ -108,9 +100,9 @@ export function ContactList({ roles, board, agents, bang, ringing, onLine, pause
             role="option"
             aria-selected={i === index}
             className={`contact ${i === index ? "selected" : ""} ${c.status}`}
-            onMouseEnter={() => setSelectedId(c.roleId)}
-            onClick={() => onDial(c.roleId)}
-            title={`Call ${c.firstName}`}
+            onClick={() => onSelect(c.roleId)}
+            onDoubleClick={() => onDial(c.roleId)}
+            title={`${c.firstName}'s profile (double-click to call)`}
           >
             <span className="contact-face">
               <Avatar roleId={c.roleId} name={c.name} src={avatarOf(c.roleId)} size={44} />
@@ -135,9 +127,17 @@ export function ContactList({ roles, board, agents, bang, ringing, onLine, pause
                   {c.unseen.length > 1 ? `${c.unseen.length} results ready` : "Result ready"}
                 </button>
               )}
-              <span className="contact-call" aria-hidden>
+              <button
+                className="contact-call"
+                title={`Call ${c.firstName}`}
+                aria-label={`Call ${c.firstName}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDial(c.roleId);
+                }}
+              >
                 <PhoneIcon />
-              </span>
+              </button>
             </span>
           </li>
         ))}
@@ -145,8 +145,7 @@ export function ContactList({ roles, board, agents, bang, ringing, onLine, pause
 
       <footer className="contacts-keys">
         <kbd>↑</kbd>
-        <kbd>↓</kbd> select · <kbd>Enter</kbd> call · <kbd>Esc</kbd> hang up · <kbd>B</kbd> task board · <kbd>M</kbd> arcade
-        mode
+        <kbd>↓</kbd> select · <kbd>Enter</kbd> call · <kbd>B</kbd> board · <kbd>M</kbd> arcade
       </footer>
     </section>
   );

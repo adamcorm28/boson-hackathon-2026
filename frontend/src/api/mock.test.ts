@@ -249,6 +249,23 @@ describe("mock gateway", () => {
     expect(untouched.result_summary).toBeNull();
   });
 
+  it("serves responsibilities and agent status with a progress note while working", async () => {
+    const ctx = setup();
+    expect((await ctx.gw.fetchRoles()).every((r) => (r.responsibilities ?? []).length > 0)).toBe(true);
+    expect(await ctx.gw.fetchAgentStatus("ceo")).toEqual({ role: "ceo", state: "idle", current_task_id: null, last_comment: null });
+
+    const { call } = dial(ctx, "eng_lead");
+    await vi.advanceTimersByTimeAsync(GREETING_MS);
+    talk(call);
+    await vi.advanceTimersByTimeAsync(300); // Dwight has picked up the fix
+    const working = await ctx.gw.fetchAgentStatus("engineer");
+    expect(working).toMatchObject({ role: "engineer", state: "working", current_task_id: "DM-111" });
+    expect(working.last_comment).toBeTruthy();
+
+    const err = await ctx.gw.fetchAgentStatus("nobody").catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(GatewayError);
+  });
+
   it("fetchTask rejects unknown ids with a 404 GatewayError", async () => {
     const { gw } = setup();
     const err = await gw.fetchTask("DM-999").catch((e: unknown) => e);

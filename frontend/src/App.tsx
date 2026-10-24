@@ -6,7 +6,7 @@ import { Whiteboard } from "./board/Whiteboard";
 import { CallChooser } from "./call/CallChooser";
 import { CallWindow } from "./call/CallWindow";
 import { useCall } from "./call/useCall";
-import { ContactList } from "./contacts/ContactList";
+import { ClassicView } from "./contacts/ClassicView";
 import { DevPanel } from "./dev/DevPanel";
 import {
   loadStoredMode,
@@ -207,7 +207,8 @@ function OfficeApp() {
             ringing={office.ringing}
           />
         ) : (
-          <ContactList
+          <ClassicView
+            gateway={gateway}
             roles={roles}
             board={board}
             agents={agents}

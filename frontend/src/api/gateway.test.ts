@@ -197,6 +197,14 @@ describe("REST", () => {
     expect(fetch).toHaveBeenCalledWith("http://localhost:8000/roles");
   });
 
+  it("fetchAgentStatus GETs /roles/{id}/status", async () => {
+    const { gw, fetch } = setup();
+    const status = { role: "engineer", state: "working", current_task_id: "DM-111", last_comment: "Tests running" };
+    fetch.mockResolvedValue(new Response(JSON.stringify(status), { status: 200 }));
+    await expect(gw.fetchAgentStatus("engineer")).resolves.toEqual(status);
+    expect(fetch).toHaveBeenCalledWith("http://localhost:8000/roles/engineer/status");
+  });
+
   it("fetchTask encodes the id and throws GatewayError on HTTP errors", async () => {
     const { gw, fetch } = setup();
     fetch.mockResolvedValue(new Response("not found", { status: 404 }));

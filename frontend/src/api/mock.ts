@@ -9,6 +9,7 @@ import { GatewayError } from "./gateway";
 import {
   BOARD_COLUMNS,
   CLOSE_ALREADY_ON_CALL,
+  type AgentStatusDetail,
   type Artifact,
   type Board,
   type CallEvent,
@@ -21,12 +22,33 @@ import {
 } from "./types";
 
 export const MOCK_ROLES: Role[] = [
-  { id: "ceo", name: "Michael Scott", title: "Regional Manager", reports_to: null, voice: "marcus", sprite: "michael", desk: "michael_office" },
-  { id: "cfo", name: "Kevin Malone", title: "CFO (Accounting)", reports_to: "ceo", voice: "default", sprite: "kevin", desk: "accounting" },
-  { id: "eng_lead", name: "Ryan Howard", title: "Engineering Lead (Dunder Mifflin Infinity)", reports_to: "ceo", voice: "default", sprite: "ryan", desk: "annex" },
-  { id: "engineer", name: "Dwight Schrute", title: "Engineer", reports_to: "eng_lead", voice: "jake", sprite: "dwight", desk: "dwight_desk" },
-  { id: "sales_lead", name: "Jim Halpert", title: "Sales Lead", reports_to: "ceo", voice: "oliver", sprite: "jim", desk: "jim_desk" },
+  {
+    id: "ceo", name: "Michael Scott", title: "Regional Manager", reports_to: null, voice: "marcus", sprite: "michael", desk: "michael_office",
+    responsibilities: ["Runs the Scranton branch and its Q4 targets", "Keeps an eye on sales, margin and KPIs across every team", "Handles the inbox, including updates for corporate", "Hands work to anyone on the team"],
+  },
+  {
+    id: "cfo", name: "Kevin Malone", title: "CFO (Accounting)", reports_to: "ceo", voice: "default", sprite: "kevin", desk: "accounting",
+    responsibilities: ["Branch finances: monthly P&L, margin and forecasts", "Tracks what the AI staff costs to run", "Builds Excel models, like what a deal is worth"],
+  },
+  {
+    id: "eng_lead", name: "Ryan Howard", title: "Engineering Lead (Dunder Mifflin Infinity)", reports_to: "ceo", voice: "default", sprite: "ryan", desk: "annex",
+    responsibilities: ["Owns Dunder Mifflin Infinity, the online ordering site", "Triages bugs and writes the specs", "Assigns engineering work to Dwight and reviews it"],
+  },
+  {
+    id: "engineer", name: "Dwight Schrute", title: "Engineer", reports_to: "eng_lead", voice: "jake", sprite: "dwight", desk: "dwight_desk",
+    responsibilities: ["Fixes and builds Dunder Mifflin Infinity", "Runs the tests and opens pull requests", "Reports live progress on his current task"],
+  },
+  {
+    id: "sales_lead", name: "Jim Halpert", title: "Sales Lead", reports_to: "ceo", voice: "oliver", sprite: "jim", desk: "jim_desk",
+    responsibilities: ["The sales pipeline and client deals, like Lackawanna County", "Researches new leads in the Scranton area", "Builds pitch decks for prospects"],
+  },
 ];
+
+// The latest note on a task in progress, like the agents' progress comments.
+const PROGRESS_NOTES: Record<string, string> = {
+  "DM-105": "Matched 41 of 47 October expense reports. Chasing receipts for the last six.",
+  "DM-111": "Reproduced it: orders of 50+ cases skip the discount. Fixing the check in checkout/pricing.js, then running the tests.",
+};
 
 const GREETINGS: Record<string, string> = {
   ceo: "Michael Scott, World's Best Boss. Talk to me.",
@@ -303,6 +325,14 @@ export function createMockGateway(opts: MockOptions = {}): MockGateway {
 
   return {
     fetchRoles: async () => structuredClone(MOCK_ROLES),
+    async fetchAgentStatus(roleId) {
+      if (!MOCK_ROLES.some((r) => r.id === roleId)) throw new GatewayError(404, `/roles/${roleId}/status`);
+      const current = board.columns.in_progress.filter((c) => c.assignee_role === roleId).at(-1);
+      const status: AgentStatusDetail = current
+        ? { role: roleId, state: "working", current_task_id: current.task_id, last_comment: PROGRESS_NOTES[current.task_id] ?? null }
+        : { role: roleId, state: "idle", current_task_id: null, last_comment: null };
+      return status;
+    },
     fetchBoard: async () => structuredClone(board),
     async fetchTask(id) {
       const card = findCard(id);
