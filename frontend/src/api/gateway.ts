@@ -5,6 +5,7 @@ import {
   type Board,
   type CallEvent,
   type CallSocket,
+  type DocumentEntry,
   type Gateway,
   type Role,
   type ServerEvent,
@@ -94,6 +95,7 @@ export function createGateway(baseUrl: string, deps: GatewayDeps = {}): Gateway 
     fetchRoles: () => getJson<Role[]>("/roles"),
     fetchBoard: () => getJson<Board>("/board"),
     fetchTask: (id) => getJson<TaskDetail>(`/tasks/${encodeURIComponent(id)}`),
+    fetchDocuments: () => getJson<DocumentEntry[]>("/documents"),
 
     subscribe(onEvent) {
       let source: EventSourceLike | null = null;

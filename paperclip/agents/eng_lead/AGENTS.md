@@ -21,6 +21,7 @@ Tasks titled "Research: …" are questions you answer with real research, not co
 - Write a brief to `{ARTIFACTS_DIR}/research-<slug>.md`: the answer up top, then key findings as bullets, then what we should do, then the sources as links.
 - Link it as `ARTIFACT: link {GATEWAY_PUBLIC_URL}/artifacts/research-<slug>.md Research brief`.
 - The RESULT summary gives the headline findings in plain spoken English. The brief holds the details, for when the user wants to go deeper.
+- If the task asks for a PDF report or a document to read, also turn the brief into a PDF: `{PYTHON} {SKILLS_DIR}/pdf-report/make_pdf.py {ARTIFACTS_DIR}/research-<slug>.md {ARTIFACTS_DIR}/research-<slug>.pdf`, and add `ARTIFACT: pdf {GATEWAY_PUBLIC_URL}/artifacts/research-<slug>.pdf <report title>` above the brief's link.
 
 ## When you are done
 Post exactly one comment on the issue, in this form:
@@ -30,7 +31,7 @@ RESULT: <2–4 sentence summary>
 ARTIFACT: <kind> <url> <label>      # zero or more lines
 ```
 
-- `<kind>` is one of `pr`, `diff`, `pptx`, `xlsx`, `link`. Use `link` for anything else (for example a Markdown draft).
+- `<kind>` is one of `pr`, `diff`, `pptx`, `xlsx`, `pdf`, `link`. Use `link` for anything else (for example a Markdown draft).
 - The summary is read aloud on a voice call: at most 3 short sentences, under 60 words. Say what was wrong or what you made, what you did, and the result.
 - Plain spoken English: no task IDs or ticket numbers, no URLs, no file paths, no Markdown. Links go only in ARTIFACT lines.
 - Then set the issue status to `done`.

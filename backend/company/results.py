@@ -8,7 +8,7 @@ from pathlib import Path
 
 from company.types import Artifact, Comment
 
-ARTIFACT_KINDS = ("pr", "diff", "pptx", "xlsx", "link")
+ARTIFACT_KINDS = ("pr", "diff", "pptx", "xlsx", "pdf", "link")
 
 
 def parse_result(comments: list[Comment]) -> tuple[str, list[Artifact]] | None:

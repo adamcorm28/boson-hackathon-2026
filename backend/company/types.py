@@ -27,7 +27,7 @@ class Comment:
 
 @dataclass
 class Artifact:
-    kind: Literal["pr", "diff", "pptx", "xlsx", "link"]
+    kind: Literal["pr", "diff", "pptx", "xlsx", "pdf", "link"]
     url: str
     label: str
 

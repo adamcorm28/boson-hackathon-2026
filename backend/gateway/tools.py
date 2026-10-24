@@ -69,7 +69,9 @@ TOOL_SCHEMAS: dict[str, dict] = {
         "market and industry questions, best practices, anything needing real analysis). Returns at once; "
         "you get pinged with the findings, usually within a few minutes.",
         {"question": {**_STR, "description": "the full question, with any context the user gave"},
-         "topic": {**_STR, "description": "3-6 word title, e.g. 'competitor financials'"}}),
+         "topic": {**_STR, "description": "3-6 word title, e.g. 'competitor financials'"},
+         "wants_document": {"type": "boolean",
+                            "description": "true when the user wants a report, document or PDF to read themselves"}}),
 }
 
 
@@ -116,6 +118,8 @@ async def _research(args: dict, ctx: CallContext) -> dict:
     topic = (args.get("topic") or question[:60]).strip()
     title = f"Research: {topic}"
     brief = f"{question}\n\nThis is a research task: follow 'Research tasks' in your instructions."
+    if args.get("wants_document"):
+        brief += " The user wants a document to read: also produce a PDF report."
     task_id = await ctx.company.create_task(ctx.role.id, title, brief, ctx.role.id, kind="research")
     await ctx.on_task_started(task_id, title, ctx.role.id)
     return {"task_id": task_id, "status": "started", "eta_hint": "a few minutes",

@@ -53,6 +53,15 @@ function ArtifactView({ a }: { a: Artifact }) {
           </a>
         </div>
       );
+    case "pdf":
+      return (
+        <div className="artifact">
+          <a className="artifact-button" href={a.url} target="_blank" rel="noreferrer">
+            📕 Open PDF: {a.label}
+          </a>
+          <iframe className="pdf-frame" src={a.url} title={a.label} />
+        </div>
+      );
     case "pptx":
     case "xlsx":
       return (

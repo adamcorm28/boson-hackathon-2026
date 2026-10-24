@@ -168,3 +168,26 @@ def test_skill_md_example_spec_builds(tmp_path, skill, script, ext):
     spec.write_text(example)
     result = run(SKILLS / skill / script, spec, tmp_path / f"out.{ext}")
     assert result.returncode == 0, result.stderr
+
+
+PDF = SKILLS / "pdf-report" / "make_pdf.py"
+
+
+def test_make_pdf_from_markdown_with_unicode(tmp_path):
+    src = tmp_path / "brief.md"
+    src.write_text("# Competitor report — Q4\n\nOffice Depot’s margin is ~2.5%.\n\n- Amazon Business: $60B\n- Staples • private\n\n[Source](https://example.com)\n")
+    out = tmp_path / "report.pdf"
+    result = run(PDF, src, out)
+    assert result.returncode == 0, result.stderr
+    data = out.read_bytes()
+    assert data.startswith(b"%PDF") and len(data) > 1000
+
+
+def test_make_pdf_missing_input_fails_with_message(tmp_path):
+    result = run(PDF, tmp_path / "nope.md", tmp_path / "out.pdf")
+    assert result.returncode != 0 and "not found" in result.stderr
+
+
+def test_agents_md_mention_pdf_reports(agents_md):
+    for role, text in agents_md.items():
+        assert "make_pdf.py" in text and "ARTIFACT: pdf" in text, role

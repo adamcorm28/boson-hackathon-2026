@@ -122,3 +122,25 @@ describe("callReducer", () => {
     expect(s.videoNotice).toMatch(/busy/);
   });
 });
+
+describe("attachments", () => {
+  const attachment: CallEvent = {
+    type: "attachment",
+    task_id: "DUNA-20",
+    title: "Research: competitor financials",
+    artifacts: [{ kind: "pdf", url: "http://localhost:8000/artifacts/r.pdf", label: "Competitor report" }],
+  };
+
+  it("an attachment event adds the files to the call", () => {
+    const s = live(attachment);
+    expect(s.attachments).toEqual([{ task_id: "DUNA-20", title: "Research: competitor financials", artifacts: attachment.type === "attachment" ? attachment.artifacts : [] }]);
+  });
+
+  it("the same attachment twice is shown once", () => {
+    expect(live(attachment, attachment).attachments).toHaveLength(1);
+  });
+
+  it("a new call starts without attachments", () => {
+    expect(run({ type: "dial", roleId: "cfo" }).attachments).toEqual([]);
+  });
+});
