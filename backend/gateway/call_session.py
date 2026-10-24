@@ -35,6 +35,12 @@ DELEGATION_CLAIM = re.compile(
     r"\b(he|she|they)('s| is| are) (started|starting|fixing|working|looking|building))",
     re.IGNORECASE,
 )
+# ...but only nudge when the user actually asked for work in their last turn.
+USER_REQUEST = re.compile(
+    r"\b(do it|go ahead|go for it|yes|yeah|yep|sure|okay|ok|please|have \w+|get \w+|can you|could you|"
+    r"would you|fix|make|build|send|draft|write|research|put together|start|handle|take care|delegate|assign)\b",
+    re.IGNORECASE,
+)
 DELEGATION_NUDGE = (
     "[notification from system, not the user] You just told the user the work is happening, but you "
     "never called delegate_task, so nobody is working on it. Call delegate_task now with the right "
@@ -89,9 +95,9 @@ class CallSession:
         self._inflight: TaskResult | None = None  # injected, awaiting its response.created
         self._reason = "ended"
         self._delegated_this_turn = False  # delegate_task ran since the user last spoke
-        self._delegated_in_call = False
         self._nudged_this_turn = False
         self._response_text = ""  # transcript of the response in progress
+        self._last_user_text = ""
 
     # --- lifecycle ----------------------------------------------------------------------
 
@@ -245,6 +251,7 @@ class CallSession:
             case "conversation.item.input_audio_transcription.completed":
                 text = ev.get("transcript", "")
                 self.record.transcript.append(("user", text))
+                self._last_user_text = text
                 await self._to_client({"type": "transcript.user", "text": text})
             case "response.created":
                 self._response_text = ""
@@ -282,8 +289,11 @@ class CallSession:
                 or self._delegated_this_turn or self._nudged_this_turn or self._inflight
                 or not DELEGATION_CLAIM.search(self._response_text)):
             return
-        if self._delegated_in_call and re.search(r"\balready\b", self._response_text, re.IGNORECASE):
-            return  # talking about work it delegated earlier in this call
+        text = self._response_text.strip()
+        if re.search(r"\balready\b", text, re.IGNORECASE) or text.endswith("?"):
+            return  # past work, or offering rather than claiming
+        if not USER_REQUEST.search(self._last_user_text):
+            return  # small talk: the user didn't ask for anything
         self._nudged_this_turn = True
         log.info("agent claimed delegation without calling delegate_task; nudging")
         await self._send_upstream({
@@ -311,7 +321,7 @@ class CallSession:
             await self._to_client({"type": "tool.called", "name": name, "args": args})
             output = await run_tool(name, args, self.ctx)
             if name == "delegate_task" and output.get("status") == "started":
-                self._delegated_this_turn = self._delegated_in_call = True
+                self._delegated_this_turn = True
             if name == "get_issue" and "error" not in output and args.get("task_id"):
                 self.record.touched_task_ids.add(args["task_id"])
             await self._send_upstream({

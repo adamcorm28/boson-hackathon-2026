@@ -408,16 +408,21 @@ def say(text):
             {"type": "response.done", "response": {"output": []}}]
 
 
+def user_says(text):
+    return {"type": "conversation.item.input_audio_transcription.completed", "transcript": text}
+
+
 async def test_claimed_delegation_without_tool_gets_nudged_once(harness):
     harness.make("eng_lead")
     await started(harness)
-    harness.upstream.feed(*say("Dwight's on it. I'll ping you when he's done."))
+    harness.upstream.feed(user_says("Okay, do it."), *say("Dwight's on it. I'll ping you when he's done."))
     await until(lambda: nudges(harness) == 1)
     assert harness.upstream.types()[-1] == "response.create"
     harness.upstream.feed(*say("Dwight's on it."))  # same user turn: no second nudge
     await asyncio.sleep(0.05)
     assert nudges(harness) == 1
-    harness.upstream.feed({"type": "input_audio_buffer.speech_started"}, *say("He's on it."))
+    harness.upstream.feed({"type": "input_audio_buffer.speech_started"}, user_says("Have him fix it."),
+                          *say("He's on it."))
     await until(lambda: nudges(harness) == 2)  # new user turn: guard re-arms
     harness.client.disconnect()
     await harness.task
@@ -446,6 +451,22 @@ async def test_no_nudge_for_plain_talk_or_non_delegators(harness):
     await started(harness)
     harness.upstream.feed(*say("I'm on it. Beets first."))
     await asyncio.sleep(0.05)
+    assert nudges(harness) == 0
+    harness.client.disconnect()
+    await harness.task
+
+
+async def test_no_nudge_for_small_talk_claims(harness):
+    # real transcript: the persona invented past work during small talk, which created a junk task
+    harness.make("ceo")
+    await started(harness)
+    harness.upstream.feed(user_says("Hey, how's your day going?"),
+                          *say("Great! I've assigned Dwight to the evacuation routes. He's working on it."))
+    harness.upstream.feed({"type": "input_audio_buffer.speech_started"}, user_says("Can you fix the bug?"),
+                          *say("I've already assigned Dwight to it."))
+    harness.upstream.feed({"type": "input_audio_buffer.speech_started"}, user_says("Please sort out the bug."),
+                          *say("I can get Dwight on it. Want me to assign it?"))
+    await asyncio.sleep(0.1)
     assert nudges(harness) == 0
     harness.client.disconnect()
     await harness.task

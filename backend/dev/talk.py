@@ -106,6 +106,9 @@ async def main(role: str, gateway: str, full_duplex: bool) -> None:
 
     board = asyncio.create_task(print_board_events(http_url, names))
     print(f"Calling {name}... (Ctrl+C to hang up{'' if full_duplex else '; mic mutes while they talk'})")
+    if full_duplex:
+        print("  --full-duplex needs headphones: through speakers the agent hears itself and keeps cutting off.\n"
+              "  (The browser frontend has echo cancellation built in; this terminal tool doesn't.)")
     with sd.RawInputStream(samplerate=RATE, channels=1, dtype="int16", blocksize=BLOCK, callback=on_mic), \
          sd.RawOutputStream(samplerate=RATE, channels=1, dtype="int16", blocksize=BLOCK, callback=player.callback):
         async with websockets.connect(f"{gateway}/call/{role}", max_size=None) as ws:

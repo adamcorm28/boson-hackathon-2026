@@ -10,7 +10,7 @@ SIMULATE_WORK_SECONDS=30 .venv/bin/uvicorn main:app --port 8000     # terminal 1
 .venv/bin/python dev/talk.py eng_lead                               # terminal 2 (Ctrl+C hangs up)
 ```
 - **Roles:** `ceo` (Michael), `cfo` (Kevin), `eng_lead` (Ryan), `engineer` (Dwight), `sales_lead` (Jim).
-- **Without headphones,** the mic mutes while the agent talks, so they don't hear themselves. With headphones, add `--full-duplex` so you can interrupt them.
+- **Without headphones,** the mic mutes while the agent talks, so they don't hear themselves. With headphones, add `--full-duplex` so you can interrupt them. Using `--full-duplex` through speakers makes the agent cut itself off after every word: it hears its own voice as you interrupting. The browser frontend doesn't have this problem, because browsers cancel echo automatically.
 - **Try the demo loop:** ask Ryan to have Dwight fix the Infinity bulk discount. Hang up, then call Jim and chat. About 30 s after the delegation, Jim tells you Dwight is done.
 - **Watch the screen:** transcripts, `[tool]` calls, `[board]` moves, `[done]` results and `[ping]`s print live.
 - **Finish a task by hand,** if you don't want to wait: `curl -X POST localhost:8000/dev/complete/DM-111`
