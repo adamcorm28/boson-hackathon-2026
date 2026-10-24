@@ -913,7 +913,7 @@ kbd {
   font-weight: bold;
 }
 
-/* ---- office life (interns, quips, cat, decor) ---- */
+/* ---- office life (interns, quips, decor) ---- */
 
 .tile.coffee-machine::after,
 .tile.copier::after,

@@ -1,4 +1,4 @@
-// Ambient office life, purely cosmetic: interns on coffee runs, idle one-liners, the office cat.
+// Ambient office life, purely cosmetic: interns on coffee runs and idle one-liners.
 // Pure: tickWorld(world, env, rng) -> next world. One tick = TICK_MS.
 import { OFFICE_MAP, type Desk, type Pos } from "./map";
 import { isWalkable } from "./movement";
@@ -20,7 +20,7 @@ export interface Intern {
 }
 
 export interface Bubble {
-  /** "role:<id>", "npc:<intern id>" or "cat". */
+  /** "role:<id>" or "npc:<intern id>". */
   key: string;
   text: string;
   until: number;
@@ -29,7 +29,6 @@ export interface Bubble {
 export interface World {
   tick: number;
   interns: Intern[];
-  cat: Pos;
   bubbles: Bubble[];
   /** roleId -> tick until which a coffee cup sits on their desk. */
   coffee: Record<string, number>;
@@ -55,7 +54,6 @@ export function findTile(ch: string, map: string[] = OFFICE_MAP): Pos {
 export const COFFEE_MACHINE = findTile("C");
 /** Where interns stand to brew: in front of the machine. */
 export const COFFEE_SPOT: Pos = { x: COFFEE_MACHINE.x, y: COFFEE_MACHINE.y - 1 };
-const CAT_START: Pos = { x: 15, y: 10 };
 
 const NEIGHBOURS: Pos[] = [
   { x: 0, y: -1 },
@@ -123,7 +121,6 @@ export function createWorld(): World {
       { id: "intern-1", name: "Kyle", pos: COFFEE_SPOT, mode: "brewing", path: [], to: null, waitUntil: ticks(3) },
       { id: "intern-2", name: "Priya", pos: { x: COFFEE_SPOT.x - 1, y: COFFEE_SPOT.y }, mode: "brewing", path: [], to: null, waitUntil: ticks(9) },
     ],
-    cat: CAT_START,
     bubbles: [],
     coffee: {},
   };
@@ -186,13 +183,5 @@ export function tickWorld(world: World, env: Env, rng: Rng): World {
     }
   }
 
-  // The cat wanders, and occasionally has opinions.
-  let cat = world.cat;
-  if (rng() < 0.35) {
-    const options = NEIGHBOURS.map((d) => add(cat, d)).filter((p) => isWalkable(p, env.desks, map));
-    if (options.length) cat = pick(options, rng);
-  }
-  if (rng() < 1 / 80) bubbles = say(bubbles, "cat", pick(["Mrrp.", "Meow.", "…"], rng), tick + ticks(2));
-
-  return { tick, interns, cat, bubbles, coffee };
+  return { tick, interns, bubbles, coffee };
 }

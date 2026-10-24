@@ -34,16 +34,6 @@ const TILE_CLASS: Record<string, string> = {
   P: "floor plant",
 };
 
-function Cat() {
-  const rows = ["k......k", "kk....kk", "kkkkkkkk", "kekkkkek", "kkkkkkkk", ".kkkkkk.k", ".k.kk.k.k"];
-  return (
-    <svg width={27} height={21} viewBox="0 0 9 7" shapeRendering="crispEdges" aria-hidden>
-      {rows.flatMap((row, y) =>
-        [...row].map((c, x) => (c === "." ? null : <rect key={`${x},${y}`} x={x} y={y} width={1} height={1} fill={c === "e" ? "#9adf5a" : "#3a3030"} />)),
-      )}
-    </svg>
-  );
-}
 
 interface Props {
   roles: Role[];
@@ -79,7 +69,7 @@ export function Office({
   const posRef = useRef(pos);
   posRef.current = pos;
 
-  // Ambient life (interns, quips, the cat). Q toggles it, e.g. for clean demo takes.
+  // Ambient life (interns and quips). Q toggles it, e.g. for clean demo takes.
   const [quirks, setQuirks] = useState(true);
   const [world, setWorld] = useState(createWorld);
   const ambientEnv = useRef({ desks, names: {} as Record<string, string>, busy: activeRoleId });
@@ -237,12 +227,6 @@ export function Office({
             );
           })}
 
-        {quirks && (
-          <div className="npc cat" title="The office cat" style={{ left: world.cat.x * TILE + 4, top: world.cat.y * TILE + 8, zIndex: world.cat.y * 10 + 3 }}>
-            {world.bubbles.some((b) => b.key === "cat") && <div className="speech">{world.bubbles.find((b) => b.key === "cat")!.text}</div>}
-            <Cat />
-          </div>
-        )}
 
         <div className="player" style={{ left: pos.x * TILE + 1, top: pos.y * TILE - 12, zIndex: pos.y * 10 + 5 }}>
           <Sprite look={PLAYER_LOOK} stepping={stepping} />

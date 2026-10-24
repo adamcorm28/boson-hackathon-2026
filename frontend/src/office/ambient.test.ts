@@ -69,10 +69,9 @@ describe("ambient office", () => {
     expect(backAtMachine).toBe(true);
   });
 
-  it("interns and the cat never stand in walls, decor or desks", () => {
+  it("interns never stand in walls, decor or desks", () => {
     run(1500, { desks, names, busy: null }, 3, (w) => {
       for (const i of w.interns) expect(isWalkable(i.pos, desks), `${i.id} at ${i.pos.x},${i.pos.y}`).toBe(true);
-      expect(isWalkable(w.cat, desks)).toBe(true);
     });
   });
 
