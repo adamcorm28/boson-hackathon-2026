@@ -4,6 +4,8 @@ Call the AI employees of a (parody) Dunder Mifflin Scranton in a retro office. C
 
 Run `make` to list the common commands.
 
+**Run everything:** `make up` starts Paperclip (if `COMPANY_BACKEND=paperclip` in `backend/.env`), the gateway on :8000 and the office at **http://localhost:5173**. Ctrl+C stops it. `make up-mock` does the same on the mock company, with no Paperclip.
+
 ## Quick start (mock company, no Paperclip)
 
 ```bash
