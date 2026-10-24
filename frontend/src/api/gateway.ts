@@ -148,8 +148,8 @@ export function createGateway(baseUrl: string, deps: GatewayDeps = {}): Gateway 
       };
     },
 
-    openCall(roleId): CallSocket {
-      const ws = makeWebSocket(`${wsBase}/call/${encodeURIComponent(roleId)}`);
+    openCall(roleId, opts = {}): CallSocket {
+      const ws = makeWebSocket(`${wsBase}/call/${encodeURIComponent(roleId)}${opts.video ? "?video=1" : ""}`);
       ws.binaryType = "arraybuffer";
       const audioCbs: ((pcm: ArrayBuffer) => void)[] = [];
       const eventCbs: ((e: CallEvent) => void)[] = [];

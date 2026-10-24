@@ -1398,6 +1398,29 @@ kbd {
   letter-spacing: 0.5px;
 }
 
+.zoom-joining {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--z-muted);
+  font-size: 14px;
+  line-height: normal;
+  image-rendering: auto;
+}
+
+.zoom-avatar-initials.big {
+  width: 96px;
+  height: 96px;
+  font-size: 32px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.zoom-joining span {
+  animation: zoom-pulse 1.6s ease-in-out infinite;
+}
+
 .zoom-tile.self .zoom-name {
   left: 6px;
   bottom: 6px;
@@ -1730,7 +1753,8 @@ body[data-theme="classic"] {
   color: var(--c-red);
 }
 
-.theme-classic kbd,
+.theme-classic .contacts-keys kbd,
+.theme-classic .keybar kbd,
 .theme-classic .titlecard kbd,
 .theme-classic .hud .hud-open kbd {
   font-size: 11px;
@@ -2478,4 +2502,97 @@ button.pill.result:hover:not(:disabled) {
 .theme-classic .titlecard-mock {
   font-size: 13px;
   color: var(--c-muted);
+}
+
+/* ---- call picker: audio or video ---- */
+
+.zoom.chooser {
+  width: min(420px, 100%);
+  padding: 20px;
+  gap: 16px;
+}
+
+.chooser-who {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.chooser-portrait {
+  display: grid;
+  place-items: center;
+  width: 92px;
+  height: 104px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: var(--z-tile);
+  line-height: 0;
+  image-rendering: pixelated;
+}
+
+.chooser-name {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.chooser-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.chooser-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 8px 12px;
+  border: 1px solid var(--z-line);
+  border-radius: 10px;
+  background: var(--z-tile);
+  color: var(--z-fg);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.chooser-option .zoom-icon {
+  width: 28px;
+  height: 28px;
+}
+
+.chooser-option.video {
+  background: var(--z-blue);
+  border-color: var(--z-blue);
+}
+
+button.chooser-option:hover:not(:disabled) {
+  background: #34343a;
+}
+
+button.chooser-option.video:hover:not(:disabled) {
+  background: #2a86f5;
+}
+
+.chooser-option:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.chooser-option kbd {
+  font-size: 11px;
+  border-color: currentColor;
+  opacity: 0.7;
+}
+
+.chooser-cancel {
+  align-self: center;
+  border: none;
+  background: transparent;
+  color: var(--z-muted);
+  font-size: 13px;
+}
+
+button.chooser-cancel:hover:not(:disabled) {
+  background: transparent;
+  color: var(--z-fg);
 }

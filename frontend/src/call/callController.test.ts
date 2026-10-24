@@ -62,7 +62,7 @@ describe("startCall", () => {
   it("dials, forwards events, plays audio and streams the mic", async () => {
     const t = setup();
     await flush();
-    expect(t.gateway.openCall).toHaveBeenCalledWith("ceo");
+    expect(t.gateway.openCall).toHaveBeenCalledWith("ceo", undefined);
     expect(t.actions[0]).toEqual({ type: "dial", roleId: "ceo" });
 
     t.sock.emit({ type: "call.started", role: "ceo" });
@@ -132,7 +132,7 @@ describe("startCall", () => {
 
   it("joins the live avatar room once and leaves it when the call closes", () => {
     const t = setup();
-    const view = { video: {} as HTMLVideoElement, close: vi.fn() };
+    const view = { video: {} as HTMLVideoElement, setMuted: vi.fn(), close: vi.fn() };
     const join = vi.fn(() => view);
     const media = { appendChild: vi.fn() } as unknown as HTMLElement;
     startCall(t.gateway, "ceo", () => {}, { audio: { ...t.audio, joinLiveAvatar: join, createMedia: () => media } });
@@ -143,6 +143,25 @@ describe("startCall", () => {
     expect(join).toHaveBeenCalledWith("wss://x.livekit.cloud", "jwt", "boson-avatar");
     expect(media.appendChild).toHaveBeenCalledWith(view.video);
     t.sock.close(1000);
+    expect(view.close).toHaveBeenCalled();
+  });
+
+  it("a video call asks the gateway for video and leaves the room if the avatar can't start", () => {
+    const t = setup();
+    const view = { video: {} as HTMLVideoElement, setMuted: vi.fn(), close: vi.fn() };
+    const actions: CallAction[] = [];
+    startCall(t.gateway, "ceo", (a) => actions.push(a), {
+      audio: { ...t.audio, joinLiveAvatar: () => view },
+      video: true,
+    });
+    expect(t.gateway.openCall).toHaveBeenLastCalledWith("ceo", { video: true });
+    expect(actions[0]).toEqual({ type: "dial", roleId: "ceo", video: true });
+    t.sock.emit({ type: "avatar.room", url: "wss://x.livekit.cloud", token: "jwt", avatar_identity: "boson-avatar" });
+    t.sock.emit({ type: "barge_in" });
+    expect(view.setMuted).toHaveBeenLastCalledWith(true);
+    t.sock.emit({ type: "agent.speaking", value: true });
+    expect(view.setMuted).toHaveBeenLastCalledWith(false);
+    t.sock.emit({ type: "avatar.unavailable", reason: "busy" });
     expect(view.close).toHaveBeenCalled();
   });
 

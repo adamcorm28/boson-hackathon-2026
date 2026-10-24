@@ -1,0 +1,7 @@
+# This machine's voices, per role (overrides backend/roles/*.yaml).
+# Teammates' own recorded impressions, cloned on this Boson account (mp3s in data/voices/).
+ceo: voice_21dd04e9d0482de8f19d7a1fd825b20ce001d1dd15a448664968d29b766cefb2         # michael-scott2.mp3
+cfo: voice_3dee2f3e52158b90c41c4218dc9e550574108a457a12a5c75caac22986adebb8         # kevin-malone.mp3
+eng_lead: voice_17c5946995238293140f48a1b0b30378050333989ccb1bc573c8e09dd7002fc8    # ryan-howard.mp3
+engineer: voice_e136514f84f8190e13469cb2f912dc3eda4b7aef6c1a287595a67a005f70919b    # dwight-schrute.mp3
+sales_lead: voice_83aae1aa1984f349195490a17dddb1307e8ac452d4d8540103548b79fa866df7  # jim-halpert.mp3

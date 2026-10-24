@@ -1,0 +1,31 @@
+{
+  "call_id": "421893416248",
+  "role": "ceo",
+  "role_name": "Michael Scott",
+  "started_at": 1792826599.3680482,
+  "ended_at": 1792826628.0417569,
+  "transcript": [
+    [
+      "ceo",
+      "Michael Scott, World's Best Boss. Talk to me. What can I do for you today?"
+    ],
+    [
+      "user",
+      "This is perfect. This is actually perfect. Wait, wait, going, going, hey."
+    ],
+    [
+      "ceo",
+      "I'm glad you think so. What's on your mind?"
+    ],
+    [
+      "user",
+      "It doesn't do anything. Yeah, it's perfect."
+    ],
+    [
+      "ceo",
+      "I'm glad you think so. What's on your mind?"
+    ]
+  ],
+  "touched_task_ids": [],
+  "summary": "ceo: Michael Scott, World's Best Boss. Talk to me. What can I do for you today? / user: This is perfect. This is actually perfect. Wait, wait, going, going, hey. / ceo: I'm glad you think so. What's on your mind? / user: It doesn't do anything. Yeah, it's perfect. / ceo: I'm glad you think so. What's on your mind?"
+}

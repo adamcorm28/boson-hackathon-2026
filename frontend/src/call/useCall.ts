@@ -17,7 +17,7 @@ export function useCall(gateway: Gateway, opts: { onEvent?: (e: CallEvent) => vo
 
   /** Call from a click/keypress handler. Ignored while a call is open. */
   const dial = useCallback(
-    (roleId: string) => {
+    (roleId: string, video = false) => {
       if (ctrl.current) return;
       const me: CallController = startCall(
         gateway,
@@ -29,7 +29,7 @@ export function useCall(gateway: Gateway, opts: { onEvent?: (e: CallEvent) => vo
           }
           dispatch(a);
         },
-        { onEvent: (e) => onEvent.current?.(e) },
+        { onEvent: (e) => onEvent.current?.(e), video },
       );
       ctrl.current = me;
       setMedia(me.media);

@@ -104,7 +104,10 @@ export function DevPanel() {
             {roles.map((r) => (
               <li key={r.id}>
                 {call.state.status === "idle" ? (
-                  <button onClick={() => call.dial(r.id)}>Call</button>
+                  <>
+                    <button onClick={() => call.dial(r.id)}>Call</button>{" "}
+                    <button onClick={() => call.dial(r.id, true)}>Video</button>
+                  </>
                 ) : (
                   <button onClick={() => secondCall(r)} title="Should be rejected with 4409">
                     2nd call

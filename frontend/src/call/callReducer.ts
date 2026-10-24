@@ -20,6 +20,8 @@ export interface CallTask {
 export interface CallState {
   status: "idle" | "connecting" | "live" | "ended";
   roleId: string | null;
+  /** A video call (the live avatar); otherwise voice only. */
+  video: boolean;
   speaking: boolean;
   lines: CallLine[];
   tasks: CallTask[];
@@ -34,7 +36,7 @@ export interface CallState {
 
 export type CallAction =
   | CallEvent
-  | { type: "dial"; roleId: string }
+  | { type: "dial"; roleId: string; video?: boolean }
   | { type: "closed"; code: number }
   | { type: "mic_blocked"; message?: string }
   | { type: "mic_ok" }
@@ -43,6 +45,7 @@ export type CallAction =
 export const initialCallState: CallState = {
   status: "idle",
   roleId: null,
+  video: false,
   speaking: false,
   lines: [],
   tasks: [],
@@ -62,7 +65,7 @@ function finalizeOpen(lines: CallLine[]): CallLine[] {
 export function callReducer(state: CallState, action: CallAction): CallState {
   switch (action.type) {
     case "dial":
-      return { ...initialCallState, status: "connecting", roleId: action.roleId };
+      return { ...initialCallState, status: "connecting", roleId: action.roleId, video: action.video ?? false };
     case "dismiss":
       return initialCallState;
   }

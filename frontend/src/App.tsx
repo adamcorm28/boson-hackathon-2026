@@ -3,6 +3,7 @@ import { gateway, USE_MOCK } from "./api";
 import type { Board, Role } from "./api/types";
 import { boardReducer } from "./board/boardReducer";
 import { Whiteboard } from "./board/Whiteboard";
+import { CallChooser } from "./call/CallChooser";
 import { CallWindow } from "./call/CallWindow";
 import { useCall } from "./call/useCall";
 import { ContactList } from "./contacts/ContactList";
@@ -33,7 +34,9 @@ function OfficeApp() {
   const [office, officeDispatch] = useReducer(officeReducer, undefined, () => initialOfficeState());
   const call = useCall(gateway);
   const onLine = call.state.status === "connecting" || call.state.status === "live" ? call.state.roleId : null;
-  const overlayOpen = titleOpen || boardOpen || resultTaskId !== null;
+  // Walking up to a desk (or picking a contact) asks audio or video first; the choice starts the call.
+  const [choosingFor, setChoosingFor] = useState<string | null>(null);
+  const overlayOpen = titleOpen || boardOpen || resultTaskId !== null || choosingFor !== null;
 
   useEffect(() => storeMode(mode), [mode]);
   // The page background and overlays follow the mode's theme too.
@@ -94,13 +97,16 @@ function OfficeApp() {
     return merged;
   }, [office.agents, board]);
 
-  const dial = useCallback(
-    (roleId: string) => {
+  const dial = useCallback((roleId: string) => setChoosingFor(roleId), []);
+  const startCall = useCallback(
+    (roleId: string, video: boolean) => {
+      setChoosingFor(null);
       officeDispatch({ type: "called", roleId }); // calling them clears their "!" and ringing phone
-      call.dial(roleId);
+      call.dial(roleId, video);
     },
     [call.dial],
   );
+  const choosingRole = roles.find((r) => r.id === choosingFor) ?? null;
 
   const openResult = useCallback((taskId: string) => {
     officeDispatch({ type: "opened_result", task_id: taskId });
@@ -186,6 +192,15 @@ function OfficeApp() {
           justMoved={justMoved}
           onOpenCard={openResult}
           onClose={() => setBoardOpen(false)}
+        />
+      )}
+
+      {choosingRole && (
+        <CallChooser
+          role={choosingRole}
+          onChoose={(video) => startCall(choosingRole.id, video)}
+          onCancel={() => setChoosingFor(null)}
+          classic={mode === "classic"}
         />
       )}
 

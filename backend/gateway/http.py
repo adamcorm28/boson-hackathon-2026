@@ -133,11 +133,14 @@ async def call(ws: WebSocket, role_id: str):
         await ws.close(code=CLOSE_ALREADY_ON_CALL)
         return
     ctx = CallContext(role=role, company=app_state.company, roles=app_state.roles, on_task_started=None)
-    live_id = live_avatar.avatar_id_for(role.id)
+    # ?video=1: a video call with the role's Boson live avatar; otherwise voice only, as fast as before.
+    video = ws.query_params.get("video") == "1"
+    live_id = live_avatar.avatar_id_for(role.id) if video else None
     session = CallSession(
         role, ws, app_state.connect_upstream, ctx, app_state.queue, app_state.bus,
         app_state.memory, mode=app_state.injection_mode,
-        avatar_image=avatar.ref_image_path(role.id) if avatar.enabled() and avatar.sync_mode() and not live_id else None,
+        avatar_image=(avatar.ref_image_path(role.id) if video and avatar.enabled() and avatar.sync_mode() and not live_id
+                      else None),
         public_url=app_state.PUBLIC_URL,
         live_avatar=live_avatar.LiveAvatar(live_id) if live_id else None,
     )

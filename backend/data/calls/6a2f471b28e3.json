@@ -1,0 +1,59 @@
+{
+  "call_id": "6a2f471b28e3",
+  "role": "ceo",
+  "role_name": "Michael Scott",
+  "started_at": 1792817078.2325928,
+  "ended_at": 1792817151.981168,
+  "transcript": [
+    [
+      "ceo",
+      "Michael Scott, World's Best Boss. Talk to me."
+    ],
+    [
+      "user",
+      "Hey, Michael. How's your day going?"
+    ],
+    [
+      "ceo",
+      "It's going great, thanks for asking. I just got a new coffee mug that says 'World's Best Boss' on it. It's really motivating."
+    ],
+    [
+      "ceo",
+      "I'm checking the board for you right now."
+    ],
+    [
+      "ceo",
+      "Okay, I see the Infinity checkout issue is still on the board. I'm going to have Ryan Howard look into that right now."
+    ],
+    [
+      "user",
+      "Cool. How's the branch doing?"
+    ],
+    [
+      "ceo",
+      "We're doing great, actually. We're at 61% of our Q4 goal to beat Stamford. Monthly sales are sitting at 700,000. Not bad for a Tuesday."
+    ],
+    [
+      "user",
+      "Is there anything in my inbox?"
+    ],
+    [
+      "ceo",
+      "Let me check your inbox real quick."
+    ],
+    [
+      "ceo",
+      "You've got one unread email from David Wallace about Q4 numbers. He needs those Scranton numbers by Monday."
+    ],
+    [
+      "user",
+      "What's on the board?"
+    ],
+    [
+      "ceo",
+      "The board has a few things. The Infinity checkout isn't applying bulk discounts, and Kevin's working on those Q4 numbers for David. There's also a fire drill plan in the backlog that I need to handle."
+    ]
+  ],
+  "touched_task_ids": [],
+  "summary": "ceo: We're doing great, actually. We're at 61% of our Q4 goal to beat Stamford. Monthly sales are sitting at 700,000. Not bad for a Tuesday. / user: Is there anything in my inbox? / ceo: Let me check your inbox real quick. / ceo: You've got one unread email from David Wallace about Q4 numbers. He needs those Scranton numbers by Monday. / user: What's on the board? / ceo: The board has a few things. The Infinity checkout isn't applying bulk discounts, and Kevin's working on those Q4 numbers for David. There's also a fire drill plan in the backlog that I need to handle."
+}

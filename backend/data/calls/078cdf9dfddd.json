@@ -1,0 +1,15 @@
+{
+  "call_id": "078cdf9dfddd",
+  "role": "ceo",
+  "role_name": "Michael Scott",
+  "started_at": 1792824888.449374,
+  "ended_at": 1792824897.137824,
+  "transcript": [
+    [
+      "ceo",
+      "Hello! Michael Scott, World's Best Boss. How can I help you today?"
+    ]
+  ],
+  "touched_task_ids": [],
+  "summary": "ceo: Hello! Michael Scott, World's Best Boss. How can I help you today?"
+}

@@ -148,5 +148,6 @@ export interface Gateway {
   fetchTask(id: string): Promise<TaskDetail>;
   /** Returns an unsubscribe function. */
   subscribe(onEvent: (e: ServerEvent) => void): () => void;
-  openCall(roleId: string): CallSocket;
+  /** video: a video call with the role's live avatar (the gateway sends `avatar.room`). */
+  openCall(roleId: string, opts?: { video?: boolean }): CallSocket;
 }

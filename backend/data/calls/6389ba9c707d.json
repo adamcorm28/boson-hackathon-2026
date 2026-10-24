@@ -1,0 +1,35 @@
+{
+  "call_id": "6389ba9c707d",
+  "role": "ceo",
+  "role_name": "Michael Scott",
+  "started_at": 1792822160.898976,
+  "ended_at": 1792822182.014752,
+  "transcript": [
+    [
+      "ceo",
+      "Hello! Michael Scott, World's Best Boss here. How can I help you today?"
+    ],
+    [
+      "user",
+      "I'm here."
+    ],
+    [
+      "user",
+      "That doesn't sound like him."
+    ],
+    [
+      "ceo",
+      "Hello! Michael Scott, World's Best Boss here. How can I help you today?"
+    ],
+    [
+      "user",
+      "As the company."
+    ],
+    [
+      "ceo",
+      "Scranton's doing great! We're at 700,000 in monthly sales with a 22% gross margin. Our Q4 goal is to beat Stamford, and we're currently at 23% progress on our 2.25 million target. We've got 312 active customers and 1,184 orders this month. One flag to watch: Infinity checkout isn't applying bulk discounts yet, but Ryan's on it."
+    ]
+  ],
+  "touched_task_ids": [],
+  "summary": "ceo: Hello! Michael Scott, World's Best Boss here. How can I help you today? / user: I'm here. / user: That doesn't sound like him. / ceo: Hello! Michael Scott, World's Best Boss here. How can I help you today? / user: As the company. / ceo: Scranton's doing great! We're at 700,000 in monthly sales with a 22% gross margin. Our Q4 goal is to beat Stamford, and we're currently at 23% progress on our 2.25 million target. We've got 312 active customers and 1,184 orders this month. One flag to watch: Infinity checkout isn't applying bulk discounts yet, but Ryan's on it."
+}

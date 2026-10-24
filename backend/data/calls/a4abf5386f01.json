@@ -1,0 +1,118 @@
+{
+  "call_id": "a4abf5386f01",
+  "role": "sales_lead",
+  "role_name": "Jim Halpert",
+  "started_at": 1792821874.695953,
+  "ended_at": 1792821965.756611,
+  "transcript": [
+    [
+      "sales_lead",
+      "Hey, it's Jim. What's up?"
+    ],
+    [
+      "user",
+      "Hey Jim, how you doing?"
+    ],
+    [
+      "sales_lead",
+      "I'm doing well, thanks. Just got back from a meeting with the Lackawanna County team. We're making good progress on that quote. How about you?"
+    ],
+    [
+      "user",
+      "I'm doing good."
+    ],
+    [
+      "sales_lead",
+      "What's on your mind?"
+    ],
+    [
+      "user",
+      "Does."
+    ],
+    [
+      "sales_lead",
+      "I'm doing well, thanks."
+    ],
+    [
+      "user",
+      "Just like."
+    ],
+    [
+      "sales_lead",
+      "Lackawanna County quote on hold, blocked by missing specs. I'm looking at the renewal for Scranton Business Park too. What do you need?"
+    ],
+    [
+      "sales_lead",
+      "Lackawanna County Schools is on hold because their 60-case test order on Infinity was charged without the bulk discount. We're waiting on that fix before moving forward."
+    ],
+    [
+      "user",
+      "Hey, hey, Jim, Jim. I need a more of an update on LaQuanah."
+    ],
+    [
+      "sales_lead",
+      "It's a district-wide copy paper contract for 14 schools, valued at 120k a year. The buyer is Maria Delgado in procurement. We're just waiting on that bulk discount fix before we can move forward."
+    ],
+    [
+      "user",
+      "Okay, who's fixing that bulk discount fix?"
+    ],
+    [
+      "sales_lead",
+      "Kevin's working on those Q4 numbers for David, which should include fixing that bulk discount issue. I'll get someone on it right now."
+    ],
+    [
+      "sales_lead",
+      "Done, I'm on it."
+    ],
+    [
+      "user",
+      "Okay, Jim. Jim, I'm gonna need you to tell Kevin to fix that."
+    ],
+    [
+      "sales_lead",
+      "I've already got that task started for you. Kevin will handle the bulk discount fix for Lackawanna County. It should be done in a few minutes."
+    ],
+    [
+      "user",
+      "Okay."
+    ],
+    [
+      "sales_lead",
+      "Anything else you need on that?"
+    ],
+    [
+      "user",
+      "Let me know when it's done. Yeah."
+    ],
+    [
+      "user",
+      "Let me know when it's done. Yeah, I just interrupted you a bunch."
+    ],
+    [
+      "sales_lead",
+      "Will do. I'll let you know as soon as Kevin finishes the bulk discount fix for Lackawanna County."
+    ],
+    [
+      "user",
+      "Shit, I thought I didn't do it."
+    ],
+    [
+      "sales_lead",
+      "No worries, I've got it handled. Kevin's working on that bulk discount fix for Lackawanna County right now. I'll ping you the second it's done."
+    ],
+    [
+      "user",
+      "Yo, Jim! Stop talking."
+    ],
+    [
+      "sales_lead",
+      "Done, I'm on it."
+    ]
+  ],
+  "touched_task_ids": [
+    "DM-111",
+    "DM-112"
+  ],
+  "summary": "user: Let me know when it's done. Yeah, I just interrupted you a bunch. / sales_lead: Will do. I'll let you know as soon as Kevin finishes the bulk discount fix for Lackawanna County. / user: Shit, I thought I didn't do it. / sales_lead: No worries, I've got it handled. Kevin's working on that bulk discount fix for Lackawanna County right now. I'll ping you the second it's done. / user: Yo, Jim! Stop talking. / sales_lead: Done, I'm on it."
+}

@@ -1,8 +1,8 @@
 """Higgs Avatar faces for calls (stretch goal; spec §likeness: drawn or preset faces only).
 
-A role with a reference image in backend/data/avatars/<role_id>.(png|jpg|jpeg|webp) (gitignored,
-per machine) gets a face. Boson's live avatar sessions only take its registered faces (see
-gateway/live_avatar.py, which wins when a role has one), so there are two modes (AVATAR_MODE):
+A role with a reference image in backend/data/avatars/<role_id>.(png|jpg|jpeg|webp) gets a face.
+Boson's live avatar sessions only take its registered faces (see gateway/live_avatar.py, which wins
+when a role has one), so there are two modes (AVATAR_MODE):
 - "loop": the voice stays live. A muted talking clip, rendered once per image with
   POST /v1/videos and cached, loops while the agent speaks. Lips move with speech, not word for word.
 - "sync" (default): each reply's audio is held back and rendered with POST /v1/videos/stream; the gateway

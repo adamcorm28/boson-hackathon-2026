@@ -11,7 +11,7 @@ from company.types import VOICE_TOOL_NAMES
 BACKEND_DIR = Path(__file__).parent.parent
 DEFAULT_ROLES_DIR = BACKEND_DIR / "roles"
 # Per-machine voice choices ({role_id: voice}), e.g. teammates' cloned voices, which belong to
-# one Boson account. backend/data/ is gitignored, so this never changes the shared role files.
+# one Boson account. Kept in backend/data/ so the shared role files keep the preset voices.
 DEFAULT_VOICE_OVERRIDES = BACKEND_DIR / "data" / "voice_overrides.yaml"
 
 REQUIRED_KEYS = (

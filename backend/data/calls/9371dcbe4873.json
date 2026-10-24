@@ -1,0 +1,39 @@
+{
+  "call_id": "9371dcbe4873",
+  "role": "ceo",
+  "role_name": "Michael Scott",
+  "started_at": 1792851124.3268769,
+  "ended_at": 1792851183.9321852,
+  "transcript": [
+    [
+      "ceo",
+      "Hello! Michael Scott, World's Best Boss. Talk to me. What can I do for you today?"
+    ],
+    [
+      "user",
+      "Hey, Michael."
+    ],
+    [
+      "ceo",
+      "Hey there! How's it going?"
+    ],
+    [
+      "user",
+      "Pretty good. How's the sales looking today?"
+    ],
+    [
+      "ceo",
+      "We're at $700,000 in monthly sales, with a 22% gross margin. For Q4, we're sitting at $520,000 against a $2.25 million target. We're currently 23% into the quarter. The big flag right now is that Infinity checkout isn't applying the bulk discount, which Ryan Howard is handling."
+    ],
+    [
+      "user",
+      "Okay. Can you get Ryan on that?"
+    ],
+    [
+      "ceo",
+      "Ryan Howard is already on it. He's handling the Infinity checkout bulk discount issue."
+    ]
+  ],
+  "touched_task_ids": [],
+  "summary": "user: Hey, Michael. / ceo: Hey there! How's it going? / user: Pretty good. How's the sales looking today? / ceo: We're at $700,000 in monthly sales, with a 22% gross margin. For Q4, we're sitting at $520,000 against a $2.25 million target. We're currently 23% into the quarter. The big flag right now is that Infinity checkout isn't applying the bulk discount, which Ryan Howard is handling. / user: Okay. Can you get Ryan on that? / ceo: Ryan Howard is already on it. He's handling the Infinity checkout bulk discount issue."
+}

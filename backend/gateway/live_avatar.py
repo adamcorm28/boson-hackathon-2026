@@ -77,16 +77,29 @@ class LiveAvatar:
         self._session_id: str | None = None
         self._sender: asyncio.Task | None = None
 
-    async def start(self) -> dict:
-        """Join the room, put the avatar in it, and return what the browser needs to watch it."""
+    async def join(self) -> dict:
+        """Join the room and return what the browser needs to watch it. The browser can join while
+        summon() is still putting the avatar in, which saves a round of waiting."""
         from livekit import rtc
-        from livekit.agents.voice.avatar import DataStreamAudioOutput
 
         url = os.environ["LIVEKIT_URL"]
         async with asyncio.timeout(START_TIMEOUT_S):
             self._room = rtc.Room()
             await self._room.connect(url, _token(self.room_name, AGENT_IDENTITY, publish=True, subscribe=True),
                                      options=rtc.RoomOptions(auto_subscribe=False))
+        return {
+            "url": url,
+            "token": _token(self.room_name, VIEWER_IDENTITY, publish=False, subscribe=True),
+            "avatar_identity": AVATAR_IDENTITY,
+        }
+
+    async def summon(self) -> None:
+        """Put the avatar in the joined room and start feeding it the agent's speech."""
+        from livekit import rtc
+        from livekit.agents.voice.avatar import DataStreamAudioOutput
+
+        url = os.environ["LIVEKIT_URL"]
+        async with asyncio.timeout(START_TIMEOUT_S):
             body = {
                 "avatar_id": self.avatar_id,
                 "transport": {
@@ -116,11 +129,6 @@ class LiveAvatar:
                                              sample_rate=SAMPLE_RATE, wait_remote_track=rtc.TrackKind.KIND_AUDIO)
         self._sender = asyncio.create_task(self._send_loop())
         log.info("live avatar %s in room %s (session %s)", self.avatar_id, self.room_name, self._session_id)
-        return {
-            "url": url,
-            "token": _token(self.room_name, VIEWER_IDENTITY, publish=False, subscribe=True),
-            "avatar_identity": AVATAR_IDENTITY,
-        }
 
     def push(self, pcm: bytes) -> None:
         self._queue.put_nowait(pcm)
@@ -135,7 +143,7 @@ class LiveAvatar:
             self._output.clear_buffer()
 
     def drain(self) -> list[bytes]:
-        """Take the speech not yet sent (e.g. to play it as plain audio when start() failed)."""
+        """Take the speech not yet sent (e.g. to play it as plain audio when summon() failed)."""
         out = []
         while not self._queue.empty():
             item = self._queue.get_nowait()
