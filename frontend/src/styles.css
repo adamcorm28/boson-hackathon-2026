@@ -1,0 +1,37 @@
+:root {
+  --bg: #1b1b2a;
+  --fg: #f2efe6;
+  --muted: #9a98a8;
+  --error: #ff6b6b;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: ui-monospace, Menlo, monospace;
+}
+
+.app {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.error {
+  color: var(--error);
+}
+
+.events code {
+  font-size: 12px;
+  word-break: break-all;
+}

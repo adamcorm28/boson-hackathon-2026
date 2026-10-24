@@ -6,3 +6,6 @@ artifacts/
 backend/data/
 backend/company/data/paperclip_ids.json
 .superpowers/
+node_modules/
+frontend/dist/
+*.local
