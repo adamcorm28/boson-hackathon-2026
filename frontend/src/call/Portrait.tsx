@@ -1,23 +1,6 @@
 // Original pixel-art caricatures (no likenesses): a 12x14 face drawn as SVG pixels.
 import { useEffect, useState } from "react";
-
-type Look = {
-  hair: string;
-  skin: string;
-  shirt: string;
-  tie: string;
-  glasses?: boolean;
-  bald?: boolean;
-};
-
-const LOOKS: Record<string, Look> = {
-  ceo: { hair: "#3b2a1e", skin: "#f0c8a0", shirt: "#2d3a5c", tie: "#a8323e" }, // suit, red tie
-  cfo: { hair: "#4a3a2c", skin: "#e8b48c", shirt: "#7a8fa8", tie: "#3c4f7a", bald: true },
-  eng_lead: { hair: "#15110e", skin: "#d9a57a", shirt: "#1c1c22", tie: "#1c1c22" }, // black shirt, no tie
-  engineer: { hair: "#5a3e22", skin: "#f2cfa8", shirt: "#c9a33b", tie: "#5a3e22", glasses: true }, // mustard shirt
-  sales_lead: { hair: "#6b4a2e", skin: "#f2cba4", shirt: "#dce6f2", tie: "#48607c" },
-};
-const DEFAULT_LOOK: Look = { hair: "#555", skin: "#e6be98", shirt: "#6a6a80", tie: "#444" };
+import { lookFor, type Look } from "../art/looks";
 
 // h hair, s skin, e eye, m mouth, g glasses, b shirt, t tie, . empty
 const FACE = [
@@ -50,7 +33,7 @@ function rows(look: Look, open: boolean): string[] {
 }
 
 export function Portrait({ roleId, talking, pixel = 10 }: { roleId: string; talking: boolean; pixel?: number }) {
-  const look = LOOKS[roleId] ?? DEFAULT_LOOK;
+  const look = lookFor(roleId);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
