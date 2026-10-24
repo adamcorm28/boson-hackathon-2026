@@ -513,10 +513,12 @@ class FakeLiveAvatar:
         self.pushed: list = []
         self.closed = False
 
-    async def start(self):
+    async def join(self):
+        return {"url": "wss://x.livekit.cloud", "token": "viewer-jwt", "avatar_identity": "boson-avatar"}
+
+    async def summon(self):
         if self.fail:
             raise RuntimeError("no capacity")
-        return {"url": "wss://x.livekit.cloud", "token": "viewer-jwt", "avatar_identity": "boson-avatar"}
 
     def push(self, pcm):
         self.pushed.append(pcm)
@@ -564,7 +566,6 @@ async def test_live_avatar_failure_falls_back_to_plain_audio(harness):
     assert harness.session.live is None and live.closed
     harness.upstream.feed({"type": "response.output_audio.delta", "delta": base64.b64encode(b"\x07\x08").decode()})
     await until(lambda: harness.client.binary == [b"\x05\x06", b"\x07\x08"])
-    assert "avatar.room" not in harness.client.types()
     assert {"type": "avatar.unavailable", "reason": "error"} in harness.client.json
     harness.client.disconnect()
     await harness.task

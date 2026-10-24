@@ -3,7 +3,7 @@
 # Faces: Boson presets builtin_james_v1, builtin_claire_v1, builtin_emma_v1, or avatar ids Boson
 # registered on this API key (list them: curl https://api.boson.ai/v1/avatars -H "Authorization: Bearer $BOSON_API_KEY").
 # Remove a line to give that role plain voice (or its reference-image loop) instead.
-# ceo: builtin_james_v1
+ceo: builtin_james_v1
 cfo: builtin_james_v1
 eng_lead: builtin_james_v1
 engineer: builtin_james_v1

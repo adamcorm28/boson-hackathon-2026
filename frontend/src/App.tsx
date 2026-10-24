@@ -3,6 +3,7 @@ import { gateway, USE_MOCK } from "./api";
 import type { Board, Role } from "./api/types";
 import { boardReducer } from "./board/boardReducer";
 import { Whiteboard } from "./board/Whiteboard";
+import { CallChooser } from "./call/CallChooser";
 import { CallWindow } from "./call/CallWindow";
 import { useCall } from "./call/useCall";
 import { DevPanel } from "./dev/DevPanel";
@@ -73,13 +74,18 @@ function OfficeApp() {
     return merged;
   }, [office.agents, board]);
 
-  const dial = useCallback(
-    (roleId: string) => {
+  // Walking up to a desk asks audio or video first; the choice (a click or key) starts the call.
+  const [choosingFor, setChoosingFor] = useState<string | null>(null);
+  const dial = useCallback((roleId: string) => setChoosingFor(roleId), []);
+  const startCall = useCallback(
+    (roleId: string, video: boolean) => {
+      setChoosingFor(null);
       officeDispatch({ type: "called", roleId }); // calling them clears their "!" and ringing phone
-      call.dial(roleId);
+      call.dial(roleId, video);
     },
     [call.dial],
   );
+  const choosingRole = roles.find((r) => r.id === choosingFor) ?? null;
 
   const openResult = useCallback((taskId: string) => {
     officeDispatch({ type: "opened_result", task_id: taskId });
@@ -102,7 +108,7 @@ function OfficeApp() {
           onDial={dial}
           onHangup={call.hangup}
           onOpenBoard={() => setBoardOpen(true)}
-          paused={titleOpen || boardOpen || resultTaskId !== null}
+          paused={titleOpen || boardOpen || resultTaskId !== null || choosingFor !== null}
           agents={agents}
           bang={office.bang}
           ringing={office.ringing}
@@ -125,6 +131,14 @@ function OfficeApp() {
           justMoved={justMoved}
           onOpenCard={openResult}
           onClose={() => setBoardOpen(false)}
+        />
+      )}
+
+      {choosingRole && (
+        <CallChooser
+          role={choosingRole}
+          onChoose={(video) => startCall(choosingRole.id, video)}
+          onCancel={() => setChoosingFor(null)}
         />
       )}
 

@@ -7,7 +7,7 @@ from pathlib import Path
 
 from company import get_company
 from company.types import CompanyAPI, CompanyUnavailable, Issue, TaskResult
-from gateway import avatar, company_compat, upstream
+from gateway import avatar, company_compat, live_avatar, upstream
 from gateway.events import EventBus
 from gateway.injector import NotificationQueue
 from gateway.memory import CallMemory
@@ -70,9 +70,10 @@ async def on_complete(result: TaskResult) -> None:
 
 async def startup() -> None:
     global watcher, simulator
-    if avatar.enabled():
+    if avatar.enabled():  # only roles whose video calls use their photo (no live avatar)
         kinds = ("idle",) if avatar.sync_mode() else avatar.LOOP_KINDS
-        asyncio.create_task(avatar.prepare_loops(list(roles), kinds))
+        photo_roles = [r for r in roles if live_avatar.avatar_id_for(r) is None]
+        asyncio.create_task(avatar.prepare_loops(photo_roles, kinds))
     watcher = company_compat.make_watcher(company, on_update, on_complete)
     if watcher is not None:
         await watcher.start()

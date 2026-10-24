@@ -18,6 +18,14 @@ interface Props {
   onRetryMic(): void;
 }
 
+const initials = (name: string) =>
+  name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
 const firstName = (roles: Role[], id: string | null) => roles.find((r) => r.id === id)?.name.split(" ")[0] ?? id ?? "?";
 
 function useElapsed(live: boolean): string {
@@ -84,7 +92,7 @@ export function CallWindow({ state, roles, talking, media, muted = false, onTogg
           <div className="zoom-stage">
             <div className={`zoom-tile speaker ${talking ? "talking" : ""}`}>
               {/* A live avatar replaces the reference image, which would otherwise flash before its video arrives. */}
-              {role?.avatar_live || role?.avatar_url ? (
+              {state.video && (role?.avatar_live || role?.avatar_url) ? (
                 <AvatarFace
                   still={role.avatar_live ? null : (role.avatar_url ?? null)}
                   loop={role.avatar_live ? null : (role.avatar_loop_url ?? null)}
@@ -92,7 +100,12 @@ export function CallWindow({ state, roles, talking, media, muted = false, onTogg
                   talking={talking}
                   media={media}
                   name={fullName}
-                  placeholder={<Portrait roleId={state.roleId} talking={talking} pixel={20} />}
+                  placeholder={
+                    <div className="zoom-joining">
+                      <div className="zoom-avatar-initials big">{initials(fullName)}</div>
+                      <span>{state.videoNotice ? "Video unavailable" : "Starting video…"}</span>
+                    </div>
+                  }
                 />
               ) : (
                 <div className="zoom-portrait">

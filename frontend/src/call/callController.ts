@@ -50,10 +50,10 @@ export function startCall(
   gateway: Gateway,
   roleId: string,
   dispatch: (a: CallAction) => void,
-  opts: { audio?: CallAudio; onEvent?: (e: CallEvent) => void } = {},
+  opts: { audio?: CallAudio; onEvent?: (e: CallEvent) => void; video?: boolean } = {},
 ): CallController {
   const audio = opts.audio ?? browserAudio;
-  dispatch({ type: "dial", roleId });
+  dispatch(opts.video ? { type: "dial", roleId, video: true } : { type: "dial", roleId });
 
   const ctx = audio.createContext();
   const player = audio.createPlayer(ctx);
@@ -61,7 +61,7 @@ export function startCall(
   const media = audio.createMedia?.() ?? null;
   if (clips) media?.appendChild(clips.video);
   let live: LiveAvatarView | null = null;
-  const socket = gateway.openCall(roleId);
+  const socket = gateway.openCall(roleId, opts.video ? { video: true } : undefined);
   let mic: Mic | null = null;
   let micStarting = false;
   let closed = false;
@@ -72,11 +72,17 @@ export function startCall(
     if (e.type === "barge_in") {
       player.stop(); // before anything else: cut the audio now
       clips?.stop();
+      live?.setMuted(true);
     }
+    if (e.type === "agent.speaking" && e.value) live?.setMuted(false); // their next reply
     if (e.type === "avatar.clip") clips?.enqueue(e.url);
     if (e.type === "avatar.room" && !live && audio.joinLiveAvatar) {
       live = audio.joinLiveAvatar(e.url, e.token, e.avatar_identity);
       media?.appendChild(live.video);
+    }
+    if (e.type === "avatar.unavailable") {
+      live?.close(); // the voice comes over the call socket instead
+      live = null;
     }
     opts.onEvent?.(e);
     dispatch(e);

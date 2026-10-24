@@ -5,6 +5,8 @@ import { Room, RoomEvent, Track } from "livekit-client";
 export interface LiveAvatarView {
   /** Shows the avatar once its video track arrives (gets the "on" class then). */
   readonly video: HTMLVideoElement;
+  /** Barge-in: silence the avatar here at once; what it already sent would play for ~1 s more. */
+  setMuted(muted: boolean): void;
   close(): void;
 }
 
@@ -15,6 +17,7 @@ export function joinLiveAvatar(url: string, token: string, avatarIdentity: strin
   video.playsInline = true;
   video.muted = true; // the voice plays from its own audio element
   const audios: HTMLMediaElement[] = [];
+  let muted = false;
   const room = new Room();
 
   room.on(RoomEvent.TrackSubscribed, (track, _publication, participant) => {
@@ -25,6 +28,7 @@ export function joinLiveAvatar(url: string, token: string, avatarIdentity: strin
     } else if (track.kind === Track.Kind.Audio) {
       const el = track.attach();
       el.style.display = "none";
+      el.muted = muted;
       document.body.appendChild(el);
       audios.push(el);
     }
@@ -37,6 +41,10 @@ export function joinLiveAvatar(url: string, token: string, avatarIdentity: strin
 
   return {
     video,
+    setMuted(m) {
+      muted = m;
+      for (const el of audios) el.muted = m;
+    },
     close() {
       void room.disconnect();
       for (const el of audios) el.remove();

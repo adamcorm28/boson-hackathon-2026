@@ -135,12 +135,12 @@ class CallSession:
             instructions = build_instructions(self.role, briefing)
             self.queue.discard({r.task_id for r in pending})  # the briefing delivers them
 
+            if self.live is not None:  # in parallel with the voice session: the avatar takes ~2 s to join
+                self._live_start = asyncio.create_task(self._start_live_avatar())
             self.upstream = await self.connect_upstream()
             await self._send_upstream(self._session_update(instructions))
             await self._send_upstream({"type": "response.create"})  # the greeting (in the session instructions)
             await self._to_client({"type": "call.started", "role": self.role.id})
-            if self.live is not None:
-                self._live_start = asyncio.create_task(self._start_live_avatar())
             self.bus.publish("agent.status", {"role": self.role.id, "state": "on_call"})
 
             tasks = [asyncio.create_task(c) for c in
@@ -226,7 +226,9 @@ class CallSession:
         """Put the avatar in its room and tell the browser to watch it. On failure the call carries
         on with plain audio, including any speech queued while the avatar was starting."""
         try:
-            room = await self.live.start()
+            room = await self.live.join()
+            await self._to_client({"type": "avatar.room", **room})  # the browser joins while the avatar does
+            await self.live.summon()
         except Exception as e:
             log.warning("live avatar failed, using plain audio: %r", e)
             live, self.live = self.live, None
@@ -235,8 +237,6 @@ class CallSession:
             await live.close()
             busy = "429" in str(e) or "503" in str(e)
             await self._to_client({"type": "avatar.unavailable", "reason": "busy" if busy else "error"})
-            return
-        await self._to_client({"type": "avatar.room", **room})
 
     async def _assistant_text(self, event: dict) -> None:
         """With an avatar, the agent's words show up with its clip, not before the voice."""
