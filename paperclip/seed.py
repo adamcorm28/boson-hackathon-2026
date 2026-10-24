@@ -1,7 +1,8 @@
 """Create (or refresh) Dunder Mifflin Scranton in a local Paperclip instance.
 
 Usage: paperclip/.venv/bin/python paperclip/seed.py
-Env:   PAPERCLIP_URL (default http://127.0.0.1:3100), DEMO_REPO, ARTIFACTS_DIR, GATEWAY_PUBLIC_URL
+Env:   PAPERCLIP_URL (default http://127.0.0.1:3100), DEMO_REPO, ARTIFACTS_DIR, GATEWAY_PUBLIC_URL,
+       AGENT_MODEL (default claude-opus-5)
 
 Idempotent: the company, goal, agents and issues are matched by name/title and
 reused. Existing agents get their instructions refreshed; existing issues are
@@ -31,6 +32,9 @@ GOAL_TITLE = "Beat Stamford in Q4"
 ROLE_ORDER = ("ceo", "cfo", "eng_lead", "sales_lead", "engineer")
 # Paperclip's fixed role categories (paperclip-findings.md); the title carries the real job.
 PAPERCLIP_ROLE = {"ceo": "ceo", "cfo": "cfo", "eng_lead": "cto", "engineer": "engineer", "sales_lead": "general"}
+# Pin the model explicitly. Paperclip runs agents on its bundled Claude Code (2.1.257), which rejects
+# claude-opus-5-5 ("version 2.1.280 or newer is required"); claude-opus-5 is what its "opus" default ran.
+DEFAULT_AGENT_MODEL = "claude-opus-5"
 
 
 def render(template: str, values: dict[str, str]) -> str:
@@ -76,6 +80,7 @@ def _load_roles(repo_root: Path) -> dict[str, dict]:
 async def seed(client: httpx.AsyncClient, *, repo_root: Path, demo_repo: Path, artifacts_dir: Path,
                gateway_url: str, ids_path: Path = DEFAULT_IDS_PATH) -> dict:
     roles = _load_roles(repo_root)
+    model = os.getenv("AGENT_MODEL", DEFAULT_AGENT_MODEL)
     placeholders = {
         "ARTIFACTS_DIR": str(artifacts_dir),
         "GATEWAY_PUBLIC_URL": gateway_url.rstrip("/"),
@@ -101,14 +106,14 @@ async def seed(client: httpx.AsyncClient, *, repo_root: Path, demo_repo: Path, a
             "role": PAPERCLIP_ROLE[role_id],
             "title": role["title"],
             "adapterType": "claude_local",
-            "adapterConfig": {"cwd": str(demo_repo if role_id == "engineer" else repo_root)},
+            "adapterConfig": {"cwd": str(demo_repo if role_id == "engineer" else repo_root), "model": model},
             "instructionsBundle": bundle,
         }
         if role["reports_to"]:
             body["reportsTo"] = agent_ids[role["reports_to"]]
         agent, created = await _get_or_create(client, f"/api/companies/{cid}/agents", "name", role["name"], body)
         if not created:
-            refresh = {"title": role["title"]}
+            refresh = {"title": role["title"], "adapterConfig": {"model": model}}  # merged, not replaced
             if role["reports_to"]:
                 refresh["reportsTo"] = agent_ids[role["reports_to"]]
             _json(await client.patch(f"/api/agents/{agent['id']}", json=refresh))

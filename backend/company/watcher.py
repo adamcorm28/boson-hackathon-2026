@@ -18,17 +18,21 @@ log = logging.getLogger(__name__)
 
 COMPLETE_STATUSES = ("in_review", "done")
 MISSING_RESULT_WARN_SECONDS = 600
+# A failed run doesn't change the issue, so pending tasks are re-read every N polls to catch it.
+FAILURE_CHECK_EVERY = 5
 
 
 class TaskWatcher:
     def __init__(self, company: CompanyAPI, on_update: Callable[[Issue], Awaitable[None]],
                  on_complete: Callable[[TaskResult], Awaitable[None]], interval: float = 3.0,
-                 clock: Callable[[], float] = time.monotonic):
+                 clock: Callable[[], float] = time.monotonic, failure_check_every: int = FAILURE_CHECK_EVERY):
         self._company = company
         self._on_update = on_update
         self._on_complete = on_complete
         self._interval = interval
         self._clock = clock
+        self._failure_check_every = failure_check_every
+        self._polls = 0
         self._seen: dict[str, tuple] = {}  # task_id -> (status, updated_at, comment count)
         self._announced: set[str] = set()
         self._awaiting_result_since: dict[str, float] = {}
@@ -63,6 +67,7 @@ class TaskWatcher:
         for issue in issues:
             await self._check(issue)
         self._primed = True
+        self._polls += 1
 
     async def _check(self, issue: Issue) -> None:
         # Paperclip's list has no comments (count stays 0) but bumps updated_at on each comment;
@@ -70,8 +75,10 @@ class TaskWatcher:
         key = (issue.status, issue.updated_at, len(issue.comments))
         changed = self._seen.get(issue.task_id) != key
         self._seen[issue.task_id] = key
-        awaiting = issue.status in COMPLETE_STATUSES and issue.task_id not in self._announced
-        if not (changed or awaiting):
+        open_task = issue.task_id not in self._announced and issue.status != "cancelled"
+        awaiting = open_task and issue.status in COMPLETE_STATUSES
+        recheck = open_task and not awaiting and self._polls % self._failure_check_every == 0
+        if not (changed or awaiting or recheck):
             return
         try:
             full = await self._company.get_issue(issue.task_id)  # with comments
@@ -80,8 +87,20 @@ class TaskWatcher:
             return
         if changed and self._primed:
             await self._call(self._on_update, full)
-        if awaiting:
+        if open_task and full.failed_reason:
+            await self._report_failure(full)
+        elif awaiting:
             await self._check_result(full)
+
+    async def _report_failure(self, issue: Issue) -> None:
+        self._announced.add(issue.task_id)
+        if not self._primed:
+            return  # already failed at startup: record, don't announce
+        log.warning("task %s: run failed (%s)", issue.task_id, issue.failed_reason)
+        await self._call(self._on_complete, TaskResult(
+            task_id=issue.task_id, title=issue.title, from_role=issue.assignee_role,
+            requested_by_role=issue.requested_by_role, failed=True,
+            summary=f"The work on this couldn't finish: the agent's run failed ({issue.failed_reason}). It needs another try."))
 
     async def _check_result(self, issue: Issue) -> None:
         parsed = parse_result(issue.comments)

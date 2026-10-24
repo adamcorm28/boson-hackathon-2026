@@ -149,3 +149,47 @@ async def test_start_stop_polls_periodically(company, rec, watcher):
     await asyncio.sleep(0.05)
     await watcher.stop()
     assert [r.task_id for r in rec.completions] == [tid]
+
+
+# --- failed runs (B10 dry run: a run died with acpx_turn_failed, no RESULT, nobody was told) ---------
+
+
+async def test_failed_run_reported_once(company, rec, watcher):
+    tid = await company.create_task("cfo", "Lackawanna model", "brief", "ceo")
+    company.set_status(tid, "in_progress")
+    await watcher.poll_once()
+    company.fail(tid, "acpx_turn_failed")
+    await watcher.poll_once()
+    await watcher.poll_once()
+    assert len(rec.completions) == 1
+    result = rec.completions[0]
+    assert result.failed and result.task_id == tid and result.from_role == "cfo"
+    assert "couldn't finish" in result.summary
+
+
+async def test_failure_noticed_without_any_issue_change(company, rec):
+    # Paperclip doesn't touch the issue when a run fails, so the watcher re-checks pending tasks.
+    watcher = TaskWatcher(company, rec.on_update, rec.on_complete, failure_check_every=2)
+    tid = await company.create_task("cfo", "Lackawanna model", "brief", "ceo")
+    await watcher.poll_once()
+    company.fail(tid, "acpx_turn_failed", touch=False)
+    await watcher.poll_once()
+    assert rec.completions == []
+    await watcher.poll_once()
+    assert [r.failed for r in rec.completions] == [True]
+
+
+async def test_already_failed_at_start_not_announced(company, rec, watcher):
+    tid = await company.create_task("cfo", "Old model", "brief", "ceo")
+    company.fail(tid, "acpx_turn_failed")
+    await watcher.poll_once()
+    await watcher.poll_once()
+    assert rec.completions == []
+
+
+async def test_successful_result_is_not_failed(company, rec, watcher):
+    tid = await company.create_task("engineer", "Fix", "brief", "eng_lead")
+    await watcher.poll_once()
+    company.complete(tid, "Fixed.")
+    await watcher.poll_once()
+    assert [r.failed for r in rec.completions] == [False]

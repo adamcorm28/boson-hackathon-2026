@@ -52,6 +52,9 @@ class FakePaperclip:
             elif "instructionsBundle" in body:
                 return httpx.Response(409, json={"error": "Unsupported configuration field"})
             else:
+                body = dict(body)
+                if "adapterConfig" in body:
+                    agent["adapterConfig"] = {**agent.get("adapterConfig", {}), **body.pop("adapterConfig")}
                 agent.update(body)
             return httpx.Response(200, json=agent)
         if m := re.fullmatch(r"/api/agents/([^/]+)/instructions-bundle/file", path):
@@ -106,6 +109,25 @@ async def test_seed_creates_five_agents_with_reporting_lines(fake, tmp_path):
     assert posted["Dwight Schrute"]["role"] == "engineer" and posted["Jim Halpert"]["role"] == "general"
     assert posted["Dwight Schrute"]["adapterConfig"]["cwd"] == str(tmp_path / "dunder-mifflin-infinity")
     assert posted["Michael Scott"]["adapterConfig"]["cwd"] == str(REPO_ROOT)
+
+
+async def test_agents_pinned_to_model(fake, tmp_path, monkeypatch):
+    monkeypatch.delenv("AGENT_MODEL", raising=False)
+    await run_seed(fake, tmp_path)
+    # Paperclip's bundled Claude Code (2.1.257) rejects claude-opus-5-5; claude-opus-5 is what runs.
+    assert {b["adapterConfig"]["model"] for b in fake.posts("/agents")} == {"claude-opus-5"}
+
+
+async def test_rerun_updates_model_without_dropping_other_config(fake, tmp_path, monkeypatch):
+    await run_seed(fake, tmp_path)
+    for agent in fake.agents:
+        agent["adapterConfig"]["instructionsFilePath"] = "/managed/AGENTS.md"
+    monkeypatch.setenv("AGENT_MODEL", "claude-sonnet-5-5")
+    await run_seed(fake, tmp_path)
+    for agent in fake.agents:
+        assert agent["adapterConfig"]["model"] == "claude-sonnet-5-5"
+        assert agent["adapterConfig"]["instructionsFilePath"] == "/managed/AGENTS.md"
+        assert agent["adapterConfig"]["cwd"]
 
 
 async def test_seed_creates_company_and_goal(fake, tmp_path):

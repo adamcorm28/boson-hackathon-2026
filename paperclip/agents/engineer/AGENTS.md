@@ -33,6 +33,7 @@ ARTIFACT: <kind> <url> <label>      # zero or more lines
 ```
 
 - `<kind>` is one of `pr`, `diff`, `pptx`, `xlsx`, `link`. Use `link` for anything else (for example a Markdown draft).
-- The summary is read aloud on a voice call: plain sentences, no IDs, no URLs, no Markdown.
+- The summary is read aloud on a voice call: at most 3 short sentences, under 60 words. Say what was wrong or what you made, what you did, and the result.
+- Plain spoken English: no task IDs or ticket numbers, no URLs, no file paths, no Markdown. Links go only in ARTIFACT lines.
 - Then set the issue status to `done`.
 - If you truly cannot finish, still post a `RESULT:` comment that says what is missing, and set the status to `blocked`.

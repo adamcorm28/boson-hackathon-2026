@@ -110,6 +110,7 @@ function OfficeApp() {
         <Hud
           board={board}
           roles={roles}
+          justMoved={justMoved}
           toasts={office.toasts}
           onOpenBoard={() => setBoardOpen(true)}
           onOpenResult={openResult}
