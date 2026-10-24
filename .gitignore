@@ -9,3 +9,6 @@ backend/spikes/out/
 node_modules/
 frontend/dist/
 *.local
+
+# Call transcripts: private, change on every call, and make reset-demo clears them
+backend/data/calls/
