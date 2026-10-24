@@ -10,10 +10,19 @@ PAPERCLIP_PY := paperclip/.venv/bin/python
 
 .DEFAULT_GOAL := help
 .PHONY: help setup test test-backend test-paperclip gateway paperclip-start paperclip-stop paperclip-status \
-        paperclip-logs paperclip-ui seed reset-repo reset-demo talk scenario
+        paperclip-logs paperclip-ui seed reset-repo reset-demo talk scenario up up-mock frontend
 
 help: ## List the commands
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  \033[1m%-18s\033[0m %s\n", $$1, $$2}'
+
+up: ## Boot everything: Paperclip (if COMPANY_BACKEND=paperclip) + gateway + frontend; Ctrl+C stops
+	PORT=$(PORT) scripts/up.sh
+
+up-mock: ## Boot gateway + frontend on the mock company (no Paperclip needed)
+	COMPANY_BACKEND=mock PORT=$(PORT) scripts/up.sh
+
+frontend: ## Run only the frontend dev server (http://localhost:5173)
+	cd frontend && npx vite --port 5173 --strictPort
 
 setup: ## Full local setup: venvs, demo repo, local Paperclip, seeded company (safe to re-run)
 	DEMO_REPO="$(DEMO_REPO)" PAPERCLIP_URL="$(PAPERCLIP_URL)" scripts/setup_local.sh
