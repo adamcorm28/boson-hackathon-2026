@@ -1,0 +1,63 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## What this is
+
+A hackathon project (Boson AI × MScAC Higgs Audio Hackathon, demo recorded before 3 PM Sat 2026-10-24). You "call" AI employees of a parody **Dunder Mifflin Scranton** in a retro pixel-art office. Each call is a live Higgs Realtime voice session. The employees can delegate slow work to background Paperclip agents running Claude Code, and finished work is announced mid-conversation.
+
+**Read before building:**
+- `docs/superpowers/specs/2026-10-23-voice-company-design.md`: the design, which is the binding authority.
+- `docs/superpowers/plans/2026-10-23-voice-company-index.md`: the shared contracts between workstreams, plus ports and env vars.
+- One plan per workstream in `docs/superpowers/plans/`:
+  - A: voice gateway (`backend/gateway/`)
+  - B: company layer and Paperclip (`backend/company/`, `paperclip/`)
+  - C: arcade frontend (`frontend/`)
+
+Most of the plans are not built yet; check `git log` for what has landed.
+
+## Commands
+
+The backend uses Python 3.11+ in a venv at `backend/.venv`.
+
+```bash
+cd backend
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+cp .env.example .env            # then set BOSON_API_KEY (and ANTHROPIC_API_KEY, COMPANY_BACKEND, ...)
+.venv/bin/uvicorn main:app --reload --port 8000
+.venv/bin/pytest                                   # all tests (pytest.ini: asyncio_mode=auto, pythonpath=.)
+.venv/bin/pytest tests/company/test_mock.py::test_create_task_marks_voice_origin -v   # one test
+```
+
+Paperclip runs locally at `:3100`: `npx paperclipai@latest onboard --yes` (needs Node ≥ 24.11). The frontend will be Vite at `:5173`, with tests run by `npx vitest run`.
+
+## Architecture
+
+- **`backend/main.py`** (FastAPI) wraps the Boson APIs: `/tts`, `/avatar/*`, `/realtime/client-secret`, and a blind relay at `WS /realtime`. Endpoints and models come from env vars (see `.env.example`). The realtime URL constant is `REALTIME_URL`.
+- **Voice gateway (`backend/gateway/`, planned):**
+  - It owns the Higgs Realtime session server-side. A `CallSession` per call connects the browser socket (`WS /call/{role_id}`, binary PCM16 24 kHz frames) to Boson.
+  - It builds instructions from `backend/roles/<role>.yaml` plus a live briefing, and runs tool calls against the company layer.
+  - It injects completed-task results only in quiet gaps.
+  - It also serves `/roles`, `/board`, `/tasks/{id}`, the `/events` SSE stream, and `/artifacts/*`.
+- **Company layer (`backend/company/`):**
+  - `types.py` is **shared contract 1**. Don't change a signature without coordinating with the gateway owner.
+  - `get_company()` picks `MockCompany` (default, in-memory seed from `company/data/issues_seed.json`) or `PaperclipCompany` (`COMPANY_BACKEND=paperclip`).
+  - The mock exists so the gateway and frontend never wait on Paperclip. It has the test hooks `set_status()` and `complete()`.
+- **One employee, two bodies.**
+  - The voice body is a Realtime session: fast, with ≤ 6 tools, all names from `VOICE_TOOL_NAMES`.
+  - The work body is a Paperclip `claude_local` agent: slow and deep.
+  - The voice body's `delegate_task` creates a Paperclip issue. The work body finishes with a comment `RESULT: <summary>` plus `ARTIFACT: <kind> <url> <label>` lines. A task counts as complete only when its status is `in_review`/`done` **and** a `RESULT:` comment exists.
+- **Engineer demo repo:** `../dunder-mifflin-infinity/`, a separate git repo with a seeded bulk-discount bug. Reset it with `git reset --hard seeded-bug`.
+
+## Higgs Realtime gotchas (from Boson docs)
+
+- The protocol is OpenAI-Realtime-compatible, but **there is no MCP** and inserted messages can only have role `user` or `assistant` (no `system`).
+- With `server_vad`, `response.create` **interrupts** an in-flight response. Never send it while a response is active, except right after a client tool's `function_call_output`.
+- `web_search` is a server tool (`{"type": "web_search"}`): skip `function_call` items with `executor: "server"`, and never answer them.
+- Sessions close after 5 minutes of user silence (`session.idle_timeout`). User transcripts need `input_audio_transcription: {"model": "higgs-stt-3.1"}`.
+
+## Project rules
+
+- **Likeness:** characters from *The Office* are text personas only. Never clone the actors' voices or use their photos. Voices are Boson presets for now (Michael `marcus`, Dwight `jake`, Jim `oliver`, Ryan `default`); teammates' own cloned voices are a stretch goal. Faces are original pixel art.
+- **Personas:** at most one comedy bit per reply, and every number comes from tools.
+- **Commits and PRs:** no Claude or AI attribution. No `Co-Authored-By: Claude`, no "Generated with Claude Code".
