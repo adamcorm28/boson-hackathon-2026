@@ -1,10 +1,14 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { gateway } from "./api";
-import type { Role } from "./api/types";
+import type { Board, Role } from "./api/types";
 import { CallWindow } from "./call/CallWindow";
 import { useCall } from "./call/useCall";
 import { DevPanel } from "./dev/DevPanel";
+import { Hud } from "./office/Hud";
 import { Office } from "./office/Office";
+import { initialOfficeState, officeReducer } from "./office/officeReducer";
+import { ResultViewer } from "./results/ResultViewer";
+import { useOverlayKeys } from "./ui/useOverlayKeys";
 
 // The gateway test panel lives at ?dev
 export default function App() {
@@ -13,8 +17,11 @@ export default function App() {
 
 function OfficeApp() {
   const [roles, setRoles] = useState<Role[]>([]);
+  const [board, setBoard] = useState<Board | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [boardOpen, setBoardOpen] = useState(false);
+  const [resultTaskId, setResultTaskId] = useState<string | null>(null);
+  const [office, officeDispatch] = useReducer(officeReducer, undefined, () => initialOfficeState());
   const call = useCall(gateway);
   const onLine = call.state.status === "connecting" || call.state.status === "live" ? call.state.roleId : null;
 
@@ -23,25 +30,51 @@ function OfficeApp() {
       gateway.fetchRoles().then(
         (r) => {
           setRoles(r);
+          officeDispatch({ type: "roles", roles: r });
           setError(null);
         },
         (e: unknown) => setError(String(e)),
       );
+    // Until the board reducer (C7), refetch the board whenever a card changes.
+    const loadBoard = () => gateway.fetchBoard().then(setBoard, () => {});
     loadRoles();
+    loadBoard();
     return gateway.subscribe((e) => {
-      if (e.type === "resync") loadRoles();
+      officeDispatch(e);
+      if (e.type === "task.updated") loadBoard();
+      if (e.type === "resync") {
+        loadRoles();
+        loadBoard();
+      }
     });
   }, []);
 
-  // Temporary board overlay until the whiteboard lands (C7): B or Esc closes it.
-  useEffect(() => {
-    if (!boardOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" || e.key.toLowerCase() === "b") setBoardOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [boardOpen]);
+  // A monitor glows when the agent has an in-progress card, even before any agent.status event
+  // (e.g. work that was already running when the page loaded).
+  const agents = useMemo(() => {
+    const merged = { ...office.agents };
+    for (const card of board?.columns.in_progress ?? []) {
+      if (card.assignee_role && merged[card.assignee_role] !== "on_call") merged[card.assignee_role] = "working";
+    }
+    return merged;
+  }, [office.agents, board]);
+
+  const dial = useCallback(
+    (roleId: string) => {
+      officeDispatch({ type: "called", roleId }); // calling them clears their "!" and ringing phone
+      call.dial(roleId);
+    },
+    [call.dial],
+  );
+
+  const openResult = useCallback((taskId: string) => {
+    officeDispatch({ type: "opened_result", task_id: taskId });
+    setResultTaskId(taskId);
+  }, []);
+  const dismissToast = useCallback((id: string) => officeDispatch({ type: "dismiss_toast", id }), []);
+
+  // Temporary board overlay until the whiteboard lands (C7).
+  useOverlayKeys(boardOpen, () => setBoardOpen(false), ["b"]);
 
   return (
     <main className="app">
@@ -51,14 +84,27 @@ function OfficeApp() {
       </header>
       {error && <p className="error">Can't reach the gateway: {error}</p>}
 
-      <Office
-        roles={roles}
-        activeRoleId={onLine}
-        onDial={call.dial}
-        onHangup={call.hangup}
-        onOpenBoard={() => setBoardOpen(true)}
-        paused={boardOpen}
-      />
+      <div className="stage">
+        <Office
+          roles={roles}
+          activeRoleId={onLine}
+          onDial={dial}
+          onHangup={call.hangup}
+          onOpenBoard={() => setBoardOpen(true)}
+          paused={boardOpen || resultTaskId !== null}
+          agents={agents}
+          bang={office.bang}
+          ringing={office.ringing}
+        />
+        <Hud
+          board={board}
+          roles={roles}
+          toasts={office.toasts}
+          onOpenBoard={() => setBoardOpen(true)}
+          onOpenResult={openResult}
+          onDismissToast={dismissToast}
+        />
+      </div>
 
       {boardOpen && (
         <div className="overlay">
@@ -68,6 +114,8 @@ function OfficeApp() {
           </div>
         </div>
       )}
+
+      {resultTaskId && <ResultViewer gateway={gateway} taskId={resultTaskId} onClose={() => setResultTaskId(null)} />}
 
       <CallWindow state={call.state} roles={roles} talking={call.talking} onHangup={call.hangup} onRetryMic={call.retryMic} />
     </main>

@@ -1,6 +1,6 @@
 // The office floor: tiles, desks with their employees, and you. Thin rendering over map.ts/movement.ts.
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Role } from "../api/types";
+import type { AgentState, Role } from "../api/types";
 import { lookFor, PLAYER_LOOK } from "../art/looks";
 import { Sprite } from "../art/Sprite";
 import { layoutDesks, MAP_HEIGHT, MAP_WIDTH, OFFICE_MAP, START, type Pos } from "./map";
@@ -32,11 +32,25 @@ interface Props {
   onOpenBoard(): void;
   /** Ignore the keyboard (e.g. while the whiteboard is open). */
   paused?: boolean;
+  agents?: Record<string, AgentState>;
+  /** roleId -> unseen finished task ids ("!" bubble). */
+  bang?: Record<string, string[]>;
+  ringing?: Record<string, boolean>;
 }
 
 const firstName = (r?: Role) => r?.name.split(" ")[0] ?? "";
 
-export function Office({ roles, activeRoleId, onDial, onHangup, onOpenBoard, paused = false }: Props) {
+export function Office({
+  roles,
+  activeRoleId,
+  onDial,
+  onHangup,
+  onOpenBoard,
+  paused = false,
+  agents = {},
+  bang = {},
+  ringing = {},
+}: Props) {
   const desks = useMemo(() => layoutDesks(roles), [roles]);
   const [pos, setPos] = useState<Pos>(START);
   const [stepping, setStepping] = useState(false);
@@ -142,17 +156,24 @@ export function Office({ roles, activeRoleId, onDial, onHangup, onOpenBoard, pau
           const role = roles.find((r) => r.id === d.roleId);
           const onCall = activeRoleId === d.roleId;
           const isNear = near?.kind === "desk" && near.roleId === d.roleId;
+          const hasResult = (bang[d.roleId]?.length ?? 0) > 0;
+          const working = agents[d.roleId] === "working";
           return (
             <div key={d.roleId}>
               <div
                 className={`employee ${onCall ? "on-call" : ""}`}
                 style={{ left: d.x * TILE + 1, top: d.y * TILE - 30, zIndex: d.y * 10 + 1 }}
               >
-                {(isNear || onCall) && <div className="nameplate">{firstName(role)}</div>}
+                {hasResult ? (
+                  <div className="bang" title="Has a finished result for you">!</div>
+                ) : (
+                  (isNear || onCall) && <div className="nameplate">{firstName(role)}</div>
+                )}
                 <Sprite look={lookFor(d.roleId)} />
               </div>
               <div className="desk" style={{ left: d.x * TILE, top: d.y * TILE, zIndex: d.y * 10 + 2 }}>
-                <div className="monitor" />
+                <div className={`monitor ${working ? "on" : ""}`} title={working ? "Working" : undefined} />
+                {ringing[d.roleId] && <div className="phone" title="Ringing" />}
               </div>
             </div>
           );
