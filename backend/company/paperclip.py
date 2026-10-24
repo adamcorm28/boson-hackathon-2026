@@ -20,6 +20,14 @@ DEFAULT_IDS_PATH = Path(__file__).parent / "data" / "paperclip_ids.json"
 TIMEOUT_SECONDS = 3.0
 FLAGGED_PRIORITIES = ("critical", "high")
 LAST_COMMENT_CHARS = 300
+# Anthropic API list prices, USD per million tokens: (input, cached input read, output).
+# Only models whose cache-read price is published are listed (claude-api pricing table, 2026-10-06).
+PRICES_PER_MTOK = {
+    "claude-opus-5-5": (4.00, 0.20, 20.00),
+    "claude-sonnet-5-5": (2.00, 0.20, 10.00),
+    "claude-fable-5-1": (10.00, 0.25, 50.00),
+}
+DEFAULT_PRICING_MODEL = "claude-opus-5-5"  # Claude Code's "opus" alias
 _FOOTER = re.compile(r"\n\n---\n((?:[a-z_]+: [^\n]*\n?)+)\s*$")
 
 
@@ -124,8 +132,9 @@ class PaperclipCompany:
         return AgentStatus(role=role, state="working", current_task_id=current.task_id, last_comment=last)
 
     async def get_costs(self) -> dict:
-        """Billed cents per role plus token counts. Runs on a Claude subscription bill 0 cents, so the
-        token counts are the honest measure of work done; no price estimate is invented here."""
+        """Billed cents per role, token counts, and what the same tokens would cost at API list prices.
+        Runs on a Claude subscription bill 0 cents, so the estimate is the meaningful dollar figure.
+        PAPERCLIP_PRICING_MODEL picks the price row; an unpriced model gives estimate=None."""
         rows = await self._request("GET", f"/api/companies/{self.ids['company_id']}/costs/by-agent")
         by_role, tokens = {}, {}
         for row in rows:
@@ -139,5 +148,24 @@ class PaperclipCompany:
             "total_cents": sum(by_role.values()),
             "by_role": by_role,
             "tokens": {"by_role": tokens, "total": sum(sum(t.values()) for t in tokens.values())},
-            "note": "Runs billed to the Claude subscription show 0 cents; token counts reflect the work done.",
+            "estimate": _list_price_estimate(tokens),
+            "note": "Runs billed to the Claude subscription show 0 cents; the estimate prices the same tokens at API list prices.",
         }
+
+
+def _list_price_estimate(tokens_by_role: dict[str, dict[str, int]]) -> dict | None:
+    model = os.getenv("PAPERCLIP_PRICING_MODEL", DEFAULT_PRICING_MODEL)
+    if model not in PRICES_PER_MTOK:
+        return None
+    input_price, cached_price, output_price = PRICES_PER_MTOK[model]
+
+    def usd(t: dict[str, int]) -> float:
+        return (t["input"] * input_price + t["cached_input"] * cached_price + t["output"] * output_price) / 1_000_000
+
+    by_role = {role: round(usd(t), 4) for role, t in tokens_by_role.items()}
+    return {
+        "model": model,
+        "by_role_usd": by_role,
+        "total_usd": round(sum(usd(t) for t in tokens_by_role.values()), 4),
+        "basis": f"{model} API list prices: ${input_price:.2f}/M input, ${cached_price:.2f}/M cached input, ${output_price:.2f}/M output",
+    }

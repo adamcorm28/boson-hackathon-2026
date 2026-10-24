@@ -145,6 +145,28 @@ async def test_get_costs_reports_billed_cents_and_tokens(pc):
     assert costs["tokens"]["by_role"]["engineer"] == {"input": 1000, "cached_input": 5000, "output": 200}
 
 
+async def test_get_costs_includes_api_list_price_estimate(pc, monkeypatch):
+    monkeypatch.delenv("PAPERCLIP_PRICING_MODEL", raising=False)
+    est = (await pc.get_costs())["estimate"]
+    # Claude Opus 5.5 list prices: $4/M input, $0.20/M cached input, $20/M output
+    assert est["model"] == "claude-opus-5-5"
+    assert est["by_role_usd"] == {"engineer": 0.009, "sales_lead": 0.004}
+    assert est["total_usd"] == 0.013
+    assert "list prices" in est["basis"]
+
+
+async def test_get_costs_estimate_with_other_pricing_model(pc, monkeypatch):
+    monkeypatch.setenv("PAPERCLIP_PRICING_MODEL", "claude-sonnet-5-5")
+    est = (await pc.get_costs())["estimate"]
+    assert est["model"] == "claude-sonnet-5-5"
+    assert est["total_usd"] == 0.007  # 1500*$2/M + 5000*$0.20/M + 300*$10/M
+
+
+async def test_get_costs_unknown_pricing_model_skips_estimate(pc, monkeypatch):
+    monkeypatch.setenv("PAPERCLIP_PRICING_MODEL", "claude-mystery-9")
+    assert (await pc.get_costs())["estimate"] is None
+
+
 async def test_timeout_raises_company_unavailable():
     def boom(request):
         raise httpx.ConnectTimeout("timed out", request=request)
