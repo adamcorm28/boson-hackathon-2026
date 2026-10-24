@@ -4,12 +4,12 @@ import pytest
 
 from company.mock import MockCompany
 from gateway import company_compat
-from gateway.roles import FIXTURE_ROLES_DIR, load_roles
+from gateway.roles import DEFAULT_ROLES_DIR, load_roles
 
 
 @pytest.fixture
 def roles():
-    return load_roles(FIXTURE_ROLES_DIR)
+    return load_roles(DEFAULT_ROLES_DIR, voice_overrides={})
 
 
 @pytest.fixture

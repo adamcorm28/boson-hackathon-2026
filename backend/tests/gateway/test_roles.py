@@ -3,7 +3,7 @@ import textwrap
 import pytest
 
 from company.types import ROLE_IDS
-from gateway.roles import FIXTURE_ROLES_DIR, load_roles
+from gateway.roles import DEFAULT_ROLES_DIR, load_roles
 
 VALID = textwrap.dedent("""\
     id: eng_lead
@@ -65,5 +65,20 @@ def test_public_shape(tmp_path):
     assert pub["id"] == "eng_lead"
 
 
-def test_fixture_roles_cover_all_role_ids():
-    assert set(load_roles(FIXTURE_ROLES_DIR)) == set(ROLE_IDS)
+def test_real_roles_load_and_cover_all_role_ids():
+    assert set(load_roles(DEFAULT_ROLES_DIR)) == set(ROLE_IDS)
+
+
+def test_voice_overrides_replace_role_voice(tmp_path):
+    write(tmp_path, "eng_lead", VALID)
+    overrides = tmp_path / "voices.yml.txt"  # outside the *.yaml role glob
+    overrides.write_text("eng_lead: voice_abc123\nceo: voice_unused\n")
+    from gateway.roles import load_voice_overrides
+    roles = load_roles(tmp_path, voice_overrides=load_voice_overrides(overrides))
+    assert roles["eng_lead"].voice == "voice_abc123"
+    assert load_roles(tmp_path, voice_overrides={})["eng_lead"].voice == "default"
+
+
+def test_missing_overrides_file_is_fine(tmp_path):
+    from gateway.roles import load_voice_overrides
+    assert load_voice_overrides(tmp_path / "nope.yaml") == {}

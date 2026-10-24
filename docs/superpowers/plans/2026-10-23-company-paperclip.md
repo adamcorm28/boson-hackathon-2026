@@ -14,7 +14,7 @@
 
 - Shared contract 1 in the index is the API. Never change a signature there without telling A.
 - Likeness: personas are text only, with no actor voice clones or photos. Voices: `ceo: marcus`, `engineer: jake`, `sales_lead: oliver`, `eng_lead: default`, `cfo`: whatever A1's findings pick (use `default` until then).
-- Persona rules go in every role YAML: stay in character, **at most one comedy bit per reply**, every number and fact comes from tools and is reported accurately, short spoken sentences.
+- Persona rules go in every role YAML: excellent at the job and cooperative (personality is flavor, not friction), **lead with the answer**, never refuse/stall/hold back information or let banter affect the work, **at most one comedy bit per reply**, every number and fact comes from tools and is reported accurately, short spoken sentences. Work-body `AGENTS.md` files follow the same rule: in-character tone in comments, flawless work.
 - Business facts (exact): about $700k/month sales, 22% gross margin, Q4 goal of beating the Stamford branch. Bulk discount is **10% off orders of 50+ cases**. The Lackawanna County schools contract is worth **about $120k/yr**, blocked by the Infinity bug. David Wallace wants Q4 numbers.
 - Reporting lines: `ceo` → {`cfo`, `eng_lead`, `sales_lead`}; `eng_lead` → `engineer`.
 - Each role has ≤ 6 voice tools, all drawn from `VOICE_TOOL_NAMES`.
@@ -124,7 +124,7 @@ artifacts/                        # gitignored
   - **ceo:** `get_company_overview, read_inbox, read_email, get_board, delegate_task, lookup_company`. `can_delegate_to` = all roles.
   - **cfo:** `get_financials, get_ai_spend, get_board, delegate_task, lookup_company`. `can_delegate_to: [cfo]`.
   - **eng_lead:** `get_my_work, get_board, get_issue, delegate_task, lookup_company, web_search`. `can_delegate_to: [engineer, eng_lead]`.
-  - **engineer:** `get_my_work, get_issue, get_board, lookup_company`. `can_delegate_to: []`.
+  - **engineer:** `get_my_work, get_issue, get_board, delegate_task, lookup_company`. `can_delegate_to: [engineer]` (every role can take work directly).
   - **sales_lead:** `get_pipeline, get_deal, get_my_work, delegate_task, web_search, lookup_company`. `can_delegate_to: [sales_lead]`.
 - Each `persona` is 8–15 lines. It covers who they are, how they talk, what they care about, how they feel about the others (Dwight vs Ryan, Jim vs Dwight), and the four persona rules from Global Constraints, verbatim.
 
@@ -136,7 +136,7 @@ artifacts/                        # gitignored
   - `test_delegation_targets_are_roles`
   - `test_persona_has_rules`: each persona contains `"at most one comedy bit"`.
 - [ ] **Step 2:** Run `pytest tests/company/test_roles.py -v`. Expected: FAIL.
-- [ ] **Step 3:** Write the five YAMLs. Use the spec §6.2 persona notes and the greetings (Michael: "Michael Scott, World's Best Boss. Talk to me."; Ryan: "Yeah, Ryan. Make it quick, I have a pitch.").
+- [ ] **Step 3:** Write the five YAMLs. Use the spec §6.2 persona notes and the greetings (Michael: "Michael Scott, World's Best Boss. Talk to me."; Ryan: "Ryan here. Let's disrupt something. What do you need?").
 - [ ] **Step 4:** Run it again. Expected: PASS.
 - [ ] **Step 5:** Commit `feat(roles): Dunder Mifflin personas`.
 
@@ -227,14 +227,14 @@ artifacts/                        # gitignored
 - It creates or reuses by name:
   - the company "Dunder Mifflin Paper Company — Scranton", with the goal "Beat Stamford in Q4"
   - the 5 agents, with `name` = character, `adapterType: "claude_local"`, `adapterConfig.cwd` (`demo_repo` for the engineer, `repo_root` for the others) and `reportsTo` per the tree
-  - the agents' `instructionsBundle` from `AGENTS.md`, with `{ARTIFACTS_DIR}` and `{GATEWAY_PUBLIC_URL}` substituted
+  - the agents' `instructionsBundle` from `AGENTS.md`, with every placeholder substituted (absolute paths): `{ARTIFACTS_DIR}`, `{GATEWAY_PUBLIC_URL}`, `{SKILLS_DIR}` (= `paperclip/skills`), `{PYTHON}` (= `paperclip/.venv/bin/python`), `{DEMO_REPO}` and `{COMPANY_DATA_DIR}` (= `backend/company/data`)
   - every issue in `issues_seed.json`, **unassigned** so seeding wakes no one
 - It uses the routes recorded in `paperclip-findings.md`. CLI: `python paperclip/seed.py`.
 
 - [ ] **Step 1: Write failing tests** with `httpx.MockTransport` faking the routes:
   - `test_seed_creates_five_agents_with_reporting_lines`: check the captured POST bodies. The engineer's `reportsTo` equals the eng_lead's ID, and `adapterType == "claude_local"`.
   - `test_seed_is_idempotent`: the transport reports the company and agents as existing. Expect no agent POSTs and the same IDs returned.
-  - `test_instructions_placeholders_filled`: no `{ARTIFACTS_DIR}` is left in any posted bundle.
+  - `test_instructions_placeholders_filled`: no `{[A-Z_]+}` placeholder is left in any posted bundle.
   - `test_seed_issues_unassigned`
 - [ ] **Step 2:** Run `pytest tests/company/test_seed.py -v`. Expected: FAIL.
 - [ ] **Step 3:** Implement `seed.py`.
@@ -251,7 +251,9 @@ artifacts/                        # gitignored
 - `CompanyUnavailable` is already in `types.py` from B1. Every HTTP call uses `timeout=3.0` and converts transport errors and 5xx responses to `CompanyUnavailable`.
 - Mapping:
   - agent ID ↔ role, via `ids["agents"]`
-  - `origin` and `requested_by_role` are stored as a description footer `\n\n---\norigin: voice\nrequested_by: <role>`, unless B4 found labels or metadata. Issues without a footer are `origin: "seed"`.
+  - `origin` and `requested_by_role` are stored as a description footer `\n\n---\norigin: voice\nrequested_by: <role>`. Seed issues carry `\n\n---\norigin: seed\nowner: <role>` and are unassigned (assigning wakes the agent), so **`assignee_role` = the role of `assigneeAgentId`, or else the footer's `owner`**.
+  - `task_id`: seed issues use their seed ID (`DM-101`, via the reverse of `ids["issues"]`, which is keyed by seed task ID); voice tasks use the Paperclip `identifier` (e.g. `DUNA-11`). `get_issue` accepts either.
+  - `PaperclipCompany.from_env()` builds it from `PAPERCLIP_URL` and `backend/company/data/paperclip_ids.json` (called by `get_company()` since B1).
   - `flagged` = the priority is `critical`/`high`, or the seed title is in the flagged list
   - `create_task` POSTs the issue with `assigneeAgentId` set, which wakes the agent
   - `get_agent_status`: `working` if the role has an `in_progress` issue, with `last_comment` = the newest comment body on it, truncated to 300 chars
@@ -301,6 +303,7 @@ artifacts/                        # gitignored
 
 - [ ] **Step 1:** Write `reset_demo.sh`. It:
   - runs `git -C ../dunder-mifflin-infinity checkout main && git reset --hard seeded-bug` and deletes the `fix/*` branches
+  - on GitHub (private repo `thomas-m1/dunder-mifflin-infinity`): closes open PRs (`gh pr close --delete-branch`) and deletes remote `fix/*` branches, so `main` on origin stays at `seeded-bug`
   - empties `artifacts/` and `backend/data/calls/`
   - cancels voice-origin issues through the API
   - re-runs `seed.py`

@@ -26,3 +26,6 @@ It plays the user with TTS speech. Ryan delegates to Dwight, then Jim announces 
 .venv/bin/python dev/call_client.py ceo "How's the branch doing?"
 STAY=40 .venv/bin/python dev/call_client.py sales_lead "Hey Jim, how's the pipeline?"
 ```
+
+## Cloned voices on this machine
+Put `role_id: voice_<id>` lines in `backend/data/voice_overrides.yaml`. It's gitignored, overrides the voice in `backend/roles/*.yaml`, and is read when the gateway starts. Clones belong to one Boson account, so they stay out of the shared role files.

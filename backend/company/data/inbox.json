@@ -1,0 +1,14 @@
+[
+  {"id": "e1", "from": "David Wallace (Corporate)", "subject": "Q4 numbers for Scranton", "unread": true,
+   "body": "Michael, I need the Scranton branch Q4 numbers by Monday: sales to date, margin, and your forecast against Stamford. Stamford is a little ahead right now, so I'd like to hear the plan. Thanks, David."},
+  {"id": "e2", "from": "Maria Delgado (Lackawanna County Schools)", "subject": "Bulk pricing discrepancy on our test order", "unread": true,
+   "body": "Hi Michael, we placed a 60-case test order through Dunder Mifflin Infinity and were charged full price, not the 10% bulk rate Jim quoted us. We like working with your branch, but we can't sign the district contract until the online pricing matches the quote. Best, Maria Delgado, Procurement."},
+  {"id": "e3", "from": "Toby Flenderson (HR)", "subject": "REMINDER: annual harassment training sign-off", "unread": true,
+   "body": "Hi Michael, just a reminder that your annual harassment training sign-off is due Friday. It takes about 20 minutes. Thanks, Toby."},
+  {"id": "e4", "from": "Jan Levinson", "subject": "Serenity by Jan: candle order", "unread": false,
+   "body": "Michael, the 40 candles for the office party ship Monday. Thanks for the order. Jan."},
+  {"id": "e5", "from": "Ryan Howard", "subject": "Infinity bug (FYI)", "unread": false,
+   "body": "Hey, heads up: there's a pricing bug on Infinity where the bulk discount isn't applying on big orders. It's on the board as DM-101. I've got a fix plan ready and Dwight can take it as soon as you give the go-ahead. Ryan."},
+  {"id": "e6", "from": "Dwight Schrute", "subject": "Security breach (vending machine)", "unread": false,
+   "body": "Michael, someone has been taking more than one bag of chips per purchase from the vending machine. I have begun an investigation. Do not tell Jim. Dwight."}
+]

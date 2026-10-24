@@ -27,7 +27,7 @@ PROGRESS_NOTES = {
     "ceo": "Drafting it now. Personally.",
 }
 RESULTS = {  # role -> (summary template, artifact kind, file extension)
-    "engineer": ("Fixed {title}. All tests pass now, and the diff is attached.", "diff", "diff"),
+    "engineer": ("Done: {title}. All tests pass now, and the diff is attached.", "diff", "diff"),
     "sales_lead": ("Done: {title}. Five new Scranton leads and a six-slide pitch deck.", "link", "md"),
     "cfo": ("Finished {title}. The model is in the spreadsheet, with every number checked twice.", "link", "md"),
 }

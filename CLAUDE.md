@@ -14,7 +14,7 @@ A hackathon project (Boson AI × MScAC Higgs Audio Hackathon, demo recorded befo
   - B: company layer and Paperclip (`backend/company/`, `paperclip/`)
   - C: arcade frontend (`frontend/`)
 
-Most of the plans are not built yet; check `git log` for what has landed.
+Workstreams A (gateway) and B (company layer + Paperclip) are built; check `git log` for what has landed since.
 
 ## Commands
 
@@ -29,16 +29,18 @@ cp .env.example .env            # then set BOSON_API_KEY (and ANTHROPIC_API_KEY,
 .venv/bin/pytest tests/company/test_mock.py::test_create_task_marks_voice_origin -v   # one test
 ```
 
-Paperclip runs locally at `:3100`: `npx paperclipai@latest onboard --yes` (needs Node ≥ 24.11). The frontend will be Vite at `:5173`, with tests run by `npx vitest run`.
+`make` lists common commands (`make setup`, `make test`, `make gateway`, `make seed`, `make reset-repo`, `make paperclip-start|stop|status|logs`). Full local setup (venvs, demo repo, a local Paperclip at `:3100`, the seeded company): `make setup` = `scripts/setup_local.sh` (idempotent; see README.md). Each machine runs its own Paperclip; `paperclip_ids.json` is per-machine and optional, because the client finds the seeded company by name. Agent skills and their tests have their own venv: `paperclip/.venv/bin/pytest paperclip/tests`. The frontend will be Vite at `:5173`, with tests run by `npx vitest run`.
 
 ## Architecture
 
 - **`backend/main.py`** (FastAPI) wraps the Boson APIs: `/tts`, `/avatar/*`, `/realtime/client-secret`, and a blind relay at `WS /realtime`. Endpoints and models come from env vars (see `.env.example`). The realtime URL constant is `REALTIME_URL`.
-- **Voice gateway (`backend/gateway/`, planned):**
+- **Voice gateway (`backend/gateway/`):**
   - It owns the Higgs Realtime session server-side. A `CallSession` per call connects the browser socket (`WS /call/{role_id}`, binary PCM16 24 kHz frames) to Boson.
   - It builds instructions from `backend/roles/<role>.yaml` plus a live briefing, and runs tool calls against the company layer.
-  - It injects completed-task results only in quiet gaps.
-  - It also serves `/roles`, `/board`, `/tasks/{id}`, the `/events` SSE stream, and `/artifacts/*`.
+  - It injects completed-task results only in quiet gaps. It also nudges the model when it claims to delegate or look something up without calling the tool.
+  - It also serves `/roles`, `/board`, `/tasks/{id}`, the `/events` SSE stream, and `/artifacts/*`. With the mock company, `POST /dev/complete/{task_id}` fakes a finished task.
+  - Per-machine voices (e.g. teammates' clones) go in the gitignored `backend/data/voice_overrides.yaml` (`role_id: voice_<id>`), not in the role files.
+  - Rehearse without Paperclip or the frontend: `backend/dev/README.md` (`talk.py` to call an agent with your mic, `scenario.py` for the automated storyline check, `SIMULATE_WORK_SECONDS` for fake work bodies).
 - **Company layer (`backend/company/`):**
   - `types.py` is **shared contract 1**. Don't change a signature without coordinating with the gateway owner.
   - `get_company()` picks `MockCompany` (default, in-memory seed from `company/data/issues_seed.json`) or `PaperclipCompany` (`COMPANY_BACKEND=paperclip`).
@@ -59,5 +61,5 @@ Paperclip runs locally at `:3100`: `npx paperclipai@latest onboard --yes` (needs
 ## Project rules
 
 - **Likeness:** characters from *The Office* are text personas only. Never clone the actors' voices or use their photos. Voices are Boson presets for now (Michael `marcus`, Dwight `jake`, Jim `oliver`, Ryan `default`); teammates' own cloned voices are a stretch goal. Faces are original pixel art.
-- **Personas:** at most one comedy bit per reply, and every number comes from tools.
+- **Personas:** this simulates a well-run company; the Office is only a fun layer. Every character is excellent and cooperative, leads with the answer, never refuses, stalls or lets banter affect the work; at most one comedy bit per reply, and every number comes from tools.
 - **Commits and PRs:** no Claude or AI attribution. No `Co-Authored-By: Claude`, no "Generated with Claude Code".

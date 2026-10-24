@@ -446,8 +446,8 @@ async def test_no_nudge_after_real_delegation(harness):
     await harness.task
 
 
-async def test_no_nudge_for_plain_talk_or_non_delegators(harness):
-    harness.make("engineer")  # Dwight can't delegate
+async def test_no_nudge_without_a_user_request(harness):
+    harness.make("engineer")
     await started(harness)
     harness.upstream.feed(*say("I'm on it. Beets first."))
     await asyncio.sleep(0.05)

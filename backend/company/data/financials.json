@@ -1,0 +1,114 @@
+{
+  "currency": "USD",
+  "branch": "Dunder Mifflin Scranton",
+  "months": [
+    {
+      "month": "2025-10",
+      "sales": 655000,
+      "cogs": 514175,
+      "gross_profit": 140825,
+      "gross_margin": 0.215,
+      "operating_expenses": 118000,
+      "net_income": 22825
+    },
+    {
+      "month": "2025-11",
+      "sales": 640000,
+      "cogs": 500480,
+      "gross_profit": 139520,
+      "gross_margin": 0.218,
+      "operating_expenses": 117500,
+      "net_income": 22020
+    },
+    {
+      "month": "2025-12",
+      "sales": 610000,
+      "cogs": 480680,
+      "gross_profit": 129320,
+      "gross_margin": 0.212,
+      "operating_expenses": 121000,
+      "net_income": 8320
+    },
+    {
+      "month": "2026-01",
+      "sales": 668000,
+      "cogs": 520372,
+      "gross_profit": 147628,
+      "gross_margin": 0.221,
+      "operating_expenses": 116000,
+      "net_income": 31628
+    },
+    {
+      "month": "2026-02",
+      "sales": 672000,
+      "cogs": 524832,
+      "gross_profit": 147168,
+      "gross_margin": 0.219,
+      "operating_expenses": 115500,
+      "net_income": 31668
+    },
+    {
+      "month": "2026-03",
+      "sales": 690000,
+      "cogs": 536130,
+      "gross_profit": 153870,
+      "gross_margin": 0.223,
+      "operating_expenses": 117000,
+      "net_income": 36870
+    },
+    {
+      "month": "2026-04",
+      "sales": 681000,
+      "cogs": 531180,
+      "gross_profit": 149820,
+      "gross_margin": 0.22,
+      "operating_expenses": 116500,
+      "net_income": 33320
+    },
+    {
+      "month": "2026-05",
+      "sales": 698000,
+      "cogs": 541648,
+      "gross_profit": 156352,
+      "gross_margin": 0.224,
+      "operating_expenses": 118000,
+      "net_income": 38352
+    },
+    {
+      "month": "2026-06",
+      "sales": 705000,
+      "cogs": 549195,
+      "gross_profit": 155805,
+      "gross_margin": 0.221,
+      "operating_expenses": 119000,
+      "net_income": 36805
+    },
+    {
+      "month": "2026-07",
+      "sales": 688000,
+      "cogs": 538016,
+      "gross_profit": 149984,
+      "gross_margin": 0.218,
+      "operating_expenses": 117000,
+      "net_income": 32984
+    },
+    {
+      "month": "2026-08",
+      "sales": 712000,
+      "cogs": 551800,
+      "gross_profit": 160200,
+      "gross_margin": 0.225,
+      "operating_expenses": 118500,
+      "net_income": 41700
+    },
+    {
+      "month": "2026-09",
+      "sales": 700000,
+      "cogs": 546000,
+      "gross_profit": 154000,
+      "gross_margin": 0.22,
+      "operating_expenses": 116000,
+      "net_income": 38000
+    }
+  ]
+}
