@@ -22,6 +22,7 @@ import {
 import { Hud } from "./office/Hud";
 import { Office } from "./office/Office";
 import { initialOfficeState, officeReducer } from "./office/officeReducer";
+import { DocumentsPanel } from "./results/DocumentsPanel";
 import { ResultViewer } from "./results/ResultViewer";
 import { TitleCard } from "./ui/TitleCard";
 
@@ -57,6 +58,8 @@ function OfficeApp() {
   const [error, setError] = useState<string | null>(null);
   const [boardOpen, setBoardOpen] = useState(false);
   const [resultTaskId, setResultTaskId] = useState<string | null>(null);
+  const [docsOpen, setDocsOpen] = useState(false);
+  const [docsVersion, setDocsVersion] = useState(0);
   const [titleOpen, setTitleOpen] = useState(() => !new URLSearchParams(location.search).has("notitle"));
   const [mode, setMode] = useState<Mode>(() => pickMode(location.search, loadStoredMode()));
   const [scheme, setScheme] = useState<Scheme>(() => pickScheme(location.search, loadStoredScheme(), systemPrefersDark()));
@@ -107,6 +110,7 @@ function OfficeApp() {
     loadBoard();
     return gateway.subscribe((e) => {
       officeDispatch(e);
+      if (e.type === "task.completed") setDocsVersion((v) => v + 1);
       if (e.type === "task.updated") {
         setBoard((b) => (b ? boardReducer(b, e) : b));
         setJustMoved(e.task_id);
@@ -116,6 +120,17 @@ function OfficeApp() {
         loadBoard();
       }
     });
+  }, []);
+
+  // F toggles the Documents panel (not while typing in a field).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === "f" || e.key === "F") setDocsOpen((o) => !o);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, []);
 
   useEffect(() => {
@@ -190,6 +205,9 @@ function OfficeApp() {
             </button>
           ))}
         </div>
+        <button className="docs-toggle" onClick={() => setDocsOpen((o) => !o)}>
+          📁 Documents <kbd>F</kbd>
+        </button>
       </header>
       {error && <p className="error">Can't reach the gateway: {error}</p>}
 
@@ -254,6 +272,10 @@ function OfficeApp() {
 
       {resultTaskId && (
         <ResultViewer gateway={gateway} roles={roles} taskId={resultTaskId} onClose={() => setResultTaskId(null)} />
+      )}
+
+      {docsOpen && (
+        <DocumentsPanel gateway={gateway} roles={roles} version={docsVersion} onOpen={openResult} onClose={() => setDocsOpen(false)} />
       )}
 
       {titleOpen && <TitleCard mode={mode} onModeChange={setMode} mock={USE_MOCK} onStart={() => setTitleOpen(false)} />}

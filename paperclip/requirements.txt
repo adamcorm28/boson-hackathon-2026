@@ -4,3 +4,5 @@ httpx
 pytest
 pytest-asyncio
 pyyaml
+fpdf2
+markdown

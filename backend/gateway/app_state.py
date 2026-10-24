@@ -61,6 +61,8 @@ async def on_complete(result: TaskResult) -> None:
     # The active call announces it in a quiet gap (and pings then); otherwise the
     # next call's briefing delivers it and the frontend rings the sender's phone.
     queue.push(result)
+    if active_call is not None and result.artifacts and active_call.role.id in (result.from_role, result.requested_by_role):
+        await active_call.send_attachment(result)  # the files appear in the call window right away
     if active_call is None:
         bus.publish("ping", {
             "to_role": None, "from_role": result.from_role, "task_id": result.task_id,

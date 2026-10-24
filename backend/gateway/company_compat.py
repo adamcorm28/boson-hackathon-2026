@@ -14,7 +14,7 @@ from company.types import Artifact, Comment
 
 log = logging.getLogger(__name__)
 
-ARTIFACT_KINDS = ("pr", "diff", "pptx", "xlsx", "link")
+ARTIFACT_KINDS = ("pr", "diff", "pptx", "xlsx", "pdf", "link")
 
 
 def _optional(module: str):

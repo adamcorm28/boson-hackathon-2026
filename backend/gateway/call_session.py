@@ -11,6 +11,7 @@ import json
 import logging
 import re
 import time
+from dataclasses import asdict
 from pathlib import Path
 from typing import AsyncIterator, Awaitable, Callable, Protocol
 
@@ -205,6 +206,11 @@ class CallSession:
 
     async def _send_upstream(self, event: dict) -> None:
         await self.upstream.send(json.dumps(event))
+
+    async def send_attachment(self, result) -> None:
+        """Show a finished task's files in the call window, next to what the agent says about it."""
+        await self._to_client({"type": "attachment", "task_id": result.task_id, "title": result.title,
+                               "artifacts": [asdict(a) for a in result.artifacts]})
 
     async def _to_client(self, event: dict) -> None:
         if not self._client_open:

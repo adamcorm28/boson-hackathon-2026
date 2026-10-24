@@ -1,5 +1,5 @@
 // Call window state. Pure: actions are the gateway's CallEvents plus a few local ones.
-import { CLOSE_ALREADY_ON_CALL, CLOSE_UNKNOWN_ROLE, type CallEvent } from "../api/types";
+import { CLOSE_ALREADY_ON_CALL, CLOSE_UNKNOWN_ROLE, type Artifact, type CallEvent } from "../api/types";
 
 export const ALREADY_ON_CALL_TEXT = "Already on a call";
 export const UNKNOWN_ROLE_TEXT = "Nobody by that name works here";
@@ -17,6 +17,12 @@ export interface CallTask {
   assignee_role: string;
 }
 
+export interface CallAttachment {
+  task_id: string;
+  title: string;
+  artifacts: Artifact[];
+}
+
 export interface CallState {
   status: "idle" | "connecting" | "live" | "ended";
   roleId: string | null;
@@ -25,6 +31,8 @@ export interface CallState {
   speaking: boolean;
   lines: CallLine[];
   tasks: CallTask[];
+  /** Files from finished tasks, shown in the call window to open while you talk. */
+  attachments: CallAttachment[];
   /** Call-level problem (already on a call, connection lost). */
   error: string | null;
   /** Mic problem; the call stays up so you can still hear them. */
@@ -49,6 +57,7 @@ export const initialCallState: CallState = {
   speaking: false,
   lines: [],
   tasks: [],
+  attachments: [],
   error: null,
   micError: null,
   endReason: null,
@@ -115,6 +124,10 @@ export function callReducer(state: CallState, action: CallAction): CallState {
         ...state,
         tasks: [...state.tasks, { task_id: action.task_id, title: action.title, assignee_role: action.assignee_role }],
       };
+
+    case "attachment":
+      if (state.attachments.some((a) => a.task_id === action.task_id)) return state;
+      return { ...state, attachments: [...state.attachments, { task_id: action.task_id, title: action.title, artifacts: action.artifacts }] };
 
     case "call.ended":
       return { ...state, status: "ended", speaking: false, endReason: action.reason, lines: finalizeOpen(state.lines) };

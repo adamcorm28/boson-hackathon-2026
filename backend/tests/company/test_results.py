@@ -52,3 +52,8 @@ def test_read_brief_none_without_markdown(tmp_path):
     from company.results import read_brief
     assert read_brief([Artifact("diff", "http://x/artifacts/a.diff", "d")], tmp_path) is None
     assert read_brief([Artifact("link", "http://x/artifacts/missing.md", "m")], tmp_path) is None
+
+
+def test_parse_result_accepts_pdf_artifacts():
+    _, artifacts = parse_result([c("RESULT: Report ready.\nARTIFACT: pdf http://x/artifacts/report.pdf Competitor report")])
+    assert artifacts == [Artifact("pdf", "http://x/artifacts/report.pdf", "Competitor report")]

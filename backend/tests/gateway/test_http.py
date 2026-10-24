@@ -162,3 +162,32 @@ async def test_failed_completion_is_flagged_and_pings_couldnt_finish(state):
     events = dict(await drain(sub))
     assert events["task.completed"]["failed"] is True
     assert "couldn't finish" in events["ping"]["text"] and "is done" not in events["ping"]["text"]
+
+
+async def test_documents_lists_finished_voice_tasks_with_artifacts(client, company):
+    a = await company.create_task("cfo", "Research: competitors", "q", "cfo", kind="research")
+    company.complete(a, "Report ready.", (Artifact("pdf", "http://localhost:8000/artifacts/r.pdf", "Competitor report"),))
+    b = await company.create_task("engineer", "No files", "q", "eng_lead")
+    company.complete(b, "Nothing to attach.")
+    company.complete("DM-102", "Seed task.", (Artifact("xlsx", "http://x/q4.xlsx", "Q4"),))
+    docs = client.get("/documents").json()
+    assert [d["task_id"] for d in docs] == [a]
+    assert docs[0]["from_role"] == "cfo" and docs[0]["title"] == "Research: competitors"
+    assert docs[0]["artifacts"] == [{"kind": "pdf", "url": "http://localhost:8000/artifacts/r.pdf", "label": "Competitor report"}]
+
+
+async def test_on_complete_sends_attachment_to_matching_call(state, monkeypatch, roles):
+    sent = []
+
+    class FakeCall:
+        role = roles["cfo"]
+
+        async def send_attachment(self, result):
+            sent.append(result.task_id)
+
+    monkeypatch.setattr(app_state, "active_call", FakeCall())
+    pdf = [Artifact("pdf", "http://localhost:8000/artifacts/r.pdf", "Report")]
+    await state.on_complete(TaskResult("DM-300", "Research: competitors", "cfo", "cfo", "Ready.", pdf))
+    await state.on_complete(TaskResult("DM-301", "Fix", "engineer", "eng_lead", "Fixed.", pdf))  # someone else's
+    await state.on_complete(TaskResult("DM-302", "Note", "cfo", "cfo", "No files.", []))
+    assert sent == ["DM-300"]

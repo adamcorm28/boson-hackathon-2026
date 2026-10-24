@@ -67,7 +67,7 @@ export interface Board {
   columns: Record<BoardColumn, Card[]>;
 }
 
-export type ArtifactKind = "pr" | "diff" | "pptx" | "xlsx" | "link";
+export type ArtifactKind = "pr" | "diff" | "pptx" | "xlsx" | "pdf" | "link";
 
 export interface Artifact {
   kind: ArtifactKind;
@@ -113,6 +113,7 @@ export const CALL_EVENT_TYPES = [
   "barge_in",
   "tool.called",
   "task.started",
+  "attachment",
   "avatar.clip",
   "avatar.room",
   "avatar.unavailable",
@@ -130,6 +131,8 @@ export type CallEvent =
   | { type: "barge_in" }
   | { type: "tool.called"; name: string; args: Record<string, unknown> }
   | { type: "task.started"; task_id: string; title: string; assignee_role: string }
+  /** A finished task's files, sent to the call with the employee who did or asked for the work. */
+  | { type: "attachment"; task_id: string; title: string; artifacts: Artifact[] }
   | { type: "avatar.clip"; url: string; duration: number }
   /** LiveKit room where the live avatar publishes its video and voice; join with this subscribe-only token. */
   | { type: "avatar.room"; url: string; token: string; avatar_identity: string }
@@ -153,8 +156,18 @@ export interface CallSocket {
   onClose(cb: (code: number) => void): void;
 }
 
+/** GET /documents: finished voice tasks that produced files, newest first. */
+export interface DocumentEntry {
+  task_id: string;
+  title: string;
+  from_role: string | null;
+  summary: string;
+  artifacts: Artifact[];
+}
+
 export interface Gateway {
   fetchRoles(): Promise<Role[]>;
+  fetchDocuments(): Promise<DocumentEntry[]>;
   fetchBoard(): Promise<Board>;
   fetchTask(id: string): Promise<TaskDetail>;
   fetchAgentStatus(roleId: string): Promise<AgentStatusDetail>;

@@ -167,6 +167,18 @@ export function CallWindow({ state, roles, talking, media, muted = false, onTogg
                   </div>
                 ))}
               </div>
+              {state.attachments.length > 0 && (
+                <div className="zoom-tasks zoom-attachments">
+                  <h3>Files</h3>
+                  {state.attachments.flatMap((att) =>
+                    att.artifacts.map((a) => (
+                      <a key={a.url} className="zoom-attachment" href={a.url} target="_blank" rel="noreferrer" title={att.title}>
+                        {a.kind === "pdf" ? "📕" : a.kind === "pptx" ? "📊" : a.kind === "xlsx" ? "📈" : a.kind === "pr" ? "🔀" : "📄"} {a.label}
+                      </a>
+                    )),
+                  )}
+                </div>
+              )}
               {state.tasks.length > 0 && (
                 <div className="zoom-tasks">
                   <h3>Tasks started</h3>

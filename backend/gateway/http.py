@@ -126,6 +126,25 @@ async def get_task(task_id: str):
     }
 
 
+@router.get("/documents")
+async def get_documents():
+    """Finished voice tasks that produced files (reports, decks, diffs), newest first."""
+    try:
+        issues = await app_state.company.list_issues(status="done")
+    except CompanyUnavailable:
+        raise HTTPException(503, "Company backend unavailable")
+    docs = []
+    for i in sorted((i for i in issues if i.origin == "voice"), key=lambda i: i.updated_at, reverse=True):
+        try:
+            parsed = company_compat.parse_result((await app_state.company.get_issue(i.task_id)).comments)
+        except (KeyError, CompanyUnavailable):
+            continue
+        if parsed and parsed[1]:
+            docs.append({"task_id": i.task_id, "title": i.title, "from_role": i.assignee_role,
+                         "summary": parsed[0], "artifacts": [asdict(a) for a in parsed[1]]})
+    return docs
+
+
 @router.get("/events")
 async def events():
     return StreamingResponse(

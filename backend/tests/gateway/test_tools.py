@@ -139,3 +139,17 @@ async def test_get_issue_includes_finished_result(roles, company):
     roles["cfo"].voice_tools = [*roles["cfo"].voice_tools, "get_issue"]
     out = await run_tool("get_issue", {"task_id": tid}, ctx)
     assert out["result"] == "Three tools stand out."
+
+
+async def test_research_wanting_a_document_asks_for_a_pdf(roles, company):
+    async def noop(*a):
+        pass
+
+    role = roles["cfo"]
+    role.voice_tools = [*role.voice_tools, "research"]
+    ctx = CallContext(role=role, company=company, roles=roles, on_task_started=noop)
+    out = await run_tool("research", {"question": "Competitor financials", "topic": "competitors", "wants_document": True}, ctx)
+    issue = await company.get_issue(out["task_id"])
+    assert "PDF report" in issue.description
+    plain = await run_tool("research", {"question": "Finance tools", "topic": "tools"}, ctx)
+    assert "PDF report" not in (await company.get_issue(plain["task_id"])).description

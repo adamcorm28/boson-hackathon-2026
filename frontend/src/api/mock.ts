@@ -334,6 +334,15 @@ export function createMockGateway(opts: MockOptions = {}): MockGateway {
       return status;
     },
     fetchBoard: async () => structuredClone(board),
+    async fetchDocuments() {
+      return [...results.entries()]
+        .filter(([, r]) => r.artifacts.length > 0)
+        .map(([id, r]) => {
+          const card = findCard(id);
+          return { task_id: id, title: card?.title ?? id, from_role: card?.assignee_role ?? null, summary: r.summary, artifacts: structuredClone(r.artifacts) };
+        })
+        .reverse();
+    },
     async fetchTask(id) {
       const card = findCard(id);
       if (!card) throw new GatewayError(404, `/tasks/${id}`);
