@@ -1,6 +1,6 @@
 # Voice Company: design
 
-**Status:** draft for team approval · **Date:** 2026-10-23 · **Deadline:** recorded demo ready before 3:00 PM, Sat 2026-10-24
+**Status:** approved · **Date:** 2026-10-23 · **Deadline:** recorded demo ready before 3:00 PM, Sat 2026-10-24
 
 ## 1. Intent
 
@@ -15,7 +15,7 @@ The employees are real agents underneath. Each one is a Paperclip agent with its
 **Goals**
 - Call any one of five employees: CEO, CFO, Eng Lead, Engineer, Sales Lead. One call at a time.
 - Every employee knows the live state of the company (tasks, flags, recent calls) when the call starts.
-- Voice agents can delegate long-running work and keep talking. Results are announced when they're ready, including **cross-team pings** ("Jake from engineering just pinged, the fix is done").
+- Voice agents can delegate long-running work and keep talking. Results are announced when they're ready, including **cross-team pings** ("Dwight just messaged, he wants it on record that he fixed it single-handedly").
 - One shared task board for the whole company, visible in the UI and updating live.
 - Roles are modular: adding a role means adding one config file plus one Paperclip agent.
 - A 5-minute recorded demo (see §8).
@@ -37,7 +37,7 @@ The employees are real agents underneath. Each one is a Paperclip agent with its
 - **Voices:** TTS presets are `chloe, eleanor, jake, marcus, nora, oliver`. It's **unverified** whether they work in Realtime; fall back to cloned `voice_<id>` or `default`.
 - **Paperclip:** self-hosted Node 24 + embedded Postgres at `http://localhost:3100/api`. In `local_trusted` mode the API needs no token. Issues have statuses `backlog/todo/in_progress/in_review/blocked/done/cancelled`. Assigning an issue to an agent wakes it. Agents use the `claude_local` (Claude Code) adapter. The full route list is at `GET /api/openapi.json`.
 - **Existing code:** `backend/main.py` (FastAPI) already relays the Realtime WebSocket, mints client secrets, and wraps TTS and Avatar. It is a blind relay today.
-- **Machine:** Paperclip and Claude Code run on one teammate's laptop, which needs a working Claude Code login. The demo is recorded, so everything can be local.
+- **Machine:** Paperclip and Claude Code run on **Thomas's laptop**, using his Claude Code login. Thomas provides `ANTHROPIC_API_KEY` for call summaries. The demo is recorded, so everything can be local.
 
 ## 4. Architecture
 
@@ -68,7 +68,7 @@ Browser (React)                      Voice Gateway (FastAPI, extends backend/)  
    - **live briefing**: the role's open issues and statuses, items flagged to the user, a summary of the user's last 3 calls with anyone, and results not yet discussed
    - tool-use rules
 3. The gateway sends `session.update` with `voice`, `tools`, `server_vad` (defaults) and `input_audio_transcription: {model: "higgs-stt-3.1"}`.
-4. The gateway sends `response.create`, so the employee answers the call first ("Hey, it's Oliver, what's up?").
+4. The gateway sends `response.create`, so the employee answers the call first ("Michael Scott, World's Best Boss. Talk to me.").
 
 ### 5.2 Fast tools (synchronous, < 1 s)
 Read Paperclip or seed data and return JSON straight away through `function_call_output` + `response.create`.
@@ -96,54 +96,88 @@ On hang-up, the gateway saves the call transcript (user transcripts plus `respon
 ### 5.6 "What are you doing right now?"
 `get_my_work` includes in-progress issues, the latest agent comment and run status. So calling the Engineer in the middle of a task gets a real answer.
 
-## 6. Roles
+## 6. Roles: Dunder Mifflin, Scranton (a parody of *The Office*)
 
-The fictional company is **Kestrel Labs**, about 2 years old. It sells **Kestrel Book**, appointment booking for small clinics.
-- Business: ARR $1.2M, 85 customers, burn $95k/mo, runway 14 months.
+The company is **Dunder Mifflin Paper Company, Scranton Branch**. Customers order paper online through **Dunder Mifflin Infinity**, the website from the show.
+- Business, all invented: about $700k/month in sales, 22% gross margin. The Q4 goal is to beat the Stamford branch.
 - Live situation, seeded:
-  - The checkout charges the full monthly price ×12 on annual plans, so the annual discount is missing.
-  - That bug is stalling the **Acme Dental** deal ($48k ARR).
-  - The Q4 goal is to reach 100 customers.
+  - The Infinity checkout **doesn't apply the bulk discount** (10% off orders of 50+ cases). Big customers see higher prices than Jim quoted them.
+  - That bug is stalling the **Lackawanna County** schools contract, about $120k/yr.
+  - Corporate (David Wallace) wants Q4 numbers.
+
+**Likeness rules (non-negotiable):**
+- Characters are written as text personas only. Don't clone the actors' voices or use their photos.
+- Voices are Boson presets for now. **Stretch:** the teammates' own recorded voices, cloned with `POST /v1/audio/voices`.
+- Faces are original pixel-art caricatures. For the avatar stretch goal, use the Boson preset faces or drawn art.
+
+**Persona rules for every character:**
+- Stay in character, but **at most one comedy bit per reply**.
+- Every number and fact comes from tools and is reported accurately. Kevin can be slow, but his numbers are right.
+- Short spoken sentences.
 
 ### 6.1 Role config (one file per role, `roles/*.yaml`)
 ```yaml
 id: eng_lead
-name: Oliver Park
-title: Engineering Lead
+name: Ryan Howard
+title: Engineering Lead (Dunder Mifflin Infinity)
 reports_to: ceo
 paperclip_agent: eng-lead        # shortname in Paperclip
-voice: oliver                    # fallback: default
-greeting: "Hey, it's Oliver."
+voice: default                   # preset now; stretch: voice_<teammate-clone>
+greeting: "Yeah, Ryan. Make it quick, I have a pitch."
 persona: |                       # who they are, how they talk, what they care about
   ...
 turn_detection: {type: server_vad}   # per-role overrides allowed
 voice_tools: [get_my_work, get_board, get_issue, delegate_task, lookup_company, web_search]
 can_delegate_to: [engineer, eng_lead]
+sprite: ryan                     # arcade
+desk: annex                      # arcade
 ```
 
 ### 6.2 Roster
 
-| Role | Persona (voice) | Voice tools (fast) | Work body does (slow) |
-|---|---|---|---|
-| **CEO** Eleanor Hart | Calm, big-picture, prioritizes ruthlessly (`eleanor`) | `get_company_overview` (KPIs, flags across teams), `read_inbox` / `read_email`, `get_board`, `delegate_task` (anyone) | Draft email replies, write an investor update |
-| **CFO** Nora Lindqvist | Precise, dry humor, numbers first (`nora`) | `get_financials` (P&L, burn, runway), `get_ai_spend` (Paperclip costs API: the real cost of today's AI staff), `delegate_task` | Build an Excel model (openpyxl `.xlsx`), e.g. revenue impact of Acme Dental |
-| **Eng Lead** Oliver Park | Thoughtful, explains tradeoffs, protective of the team (`oliver`) | `get_board`, `get_issue`, `get_my_work`, `delegate_task` (→ Engineer) | Triage, write specs, review the Engineer's fix |
-| **Engineer** Jake Morales | Energetic, hands-on, a bit nerdy (`jake`) | `get_my_work` (live run status), `get_issue` | **Claude Code on the `kestrel-book` demo repo:** fix, run tests, commit on a branch, open a PR if `gh` is authenticated, otherwise show the local diff |
-| **Sales Lead** Marcus Bell | Confident, upbeat, deal-focused (`marcus`) | `get_pipeline` (seeded CRM), `get_deal`, `web_search` (server), `delegate_task` | Research leads, build a pitch deck (python-pptx `.pptx`) |
+| Role | Character and persona | Voice | Voice tools (fast) | Work body does (slow) |
+|---|---|---|---|---|
+| **CEO** | **Michael Scott.** Warm, wants to be loved, goes off on tangents, but delivers the real briefing when asked | `marcus` | `get_company_overview` (KPIs, flags across teams), `read_inbox` / `read_email`, `get_board`, `delegate_task` (anyone) | Draft email replies, e.g. the Q4 update to David Wallace |
+| **CFO** | **Kevin Malone.** Slow, simple words, food tangents, numbers always exact | preset (S1 picks) | `get_financials`, `get_ai_spend` (Paperclip costs API: the real cost of today's AI staff), `delegate_task` | Build an Excel model (openpyxl `.xlsx`), e.g. what Lackawanna County is worth |
+| **Eng Lead** | **Ryan Howard**. Startup buzzwords, overconfident, built Infinity | `default` | `get_board`, `get_issue`, `get_my_work`, `delegate_task` (→ Dwight) | Triage, write specs, review Dwight's fix |
+| **Engineer** | **Dwight Schrute.** Intense, literal, competitive, mentions beets, contemptuous of Ryan's code | `jake` | `get_my_work` (live run status), `get_issue` | **Claude Code on the `dunder-mifflin-infinity` demo repo:** fix, run tests, commit on a branch, open a PR if `gh` is authenticated, otherwise show the local diff |
+| **Sales Lead** | **Jim Halpert.** Laid back, dry, great with clients, the occasional jab at Dwight | `oliver` | `get_pipeline` (seeded CRM), `get_deal`, `web_search` (server), `delegate_task` | Research leads, build a pitch deck (python-pptx `.pptx`) |
 
-Every role also gets `lookup_company(topic)`, which searches the handbook. `chloe` stays free for a future role, such as Marketing.
+Every role also gets `lookup_company(topic)`, which searches the handbook.
 
-### 6.3 Seeded company data (`company/`)
-- `handbook.md`: mission, product, pricing, org, Q4 goals.
-- `financials.json`: 12 months of P&L.
-- `crm.json`: ~15 deals, including Acme Dental blocked by the pricing bug.
-- `inbox.json`: ~6 CEO emails, including an Acme escalation and an investor asking for an update.
+**Voices:** there are only 3 male presets for 5 male characters. Michael, Ryan, Dwight and Jim, the main demo cast, each get a distinct voice. Kevin, an optional demo segment, gets whatever S1 finds. If `GET /v1/audio/voices` has more presets, use them. Teammate voice clones are the stretch goal.
+
+**Future roles that drop in as one file each:**
+- Pam (reception, which could become the switchboard that routes calls; `chloe`)
+- Angela (accounting; `nora`)
+- Oscar, Toby (HR), Stanley and Phyllis (sales)
+- Creed (nobody knows)
+
+**Optional framing:** the user plays "corporate" (David Wallace) checking in on the Scranton branch.
+
+### 6.3 Seeded company data (`backend/company/data/`)
+- `handbook.md`: the branch, products, pricing (including the bulk-discount rule), org, Q4 goals.
+- `financials.json`: 12 months of branch P&L.
+- `crm.json`: ~15 accounts and deals, including Lackawanna County blocked by the Infinity bug.
+- `inbox.json`: ~6 emails to Michael:
+  - David Wallace asking for Q4 numbers
+  - a Lackawanna County escalation
+  - Toby with an HR reminder (Michael ignores it)
+  - one from Jan
 - `kpis.json`.
 - **Paperclip seed**, via a script calling the REST API:
   - the company and its goal
-  - the 5 agents with `AGENTS.md` instructions and the reporting lines CEO → {CFO, Eng Lead, Sales Lead}, Eng Lead → Engineer
-  - about 10 issues across teams, including the bug, flagged by the Eng Lead
-- **`kestrel-book` demo repo:** a small web app with a pricing and checkout module, a failing unit test that reproduces the bug, and a fix of about 5 lines.
+  - the 5 agents with `AGENTS.md` instructions, in character, and the reporting lines Michael → {Kevin, Ryan, Jim}, Ryan → Dwight
+  - about 10 issues across teams, including the Infinity bug, flagged by Ryan
+- **`dunder-mifflin-infinity` demo repo:** a small web storefront with a pricing and checkout module, a failing unit test that reproduces the bulk-discount bug, and a fix of about 5 lines.
+
+**Arcade layout:** the Scranton office floor.
+- reception at the entrance
+- Michael's office with a door
+- Jim and Dwight's facing desks
+- the accounting corner (Kevin)
+- the annex (Ryan)
+- the conference room whiteboard, which is the Kanban board
 
 Mocks stay behind tool functions, so a real connector (AgentMail, HubSpot, Stripe) can replace one later without changing the voice layer.
 
@@ -158,7 +192,7 @@ The office is a top-down pixel-art floor with one cubicle per employee. You walk
   - phone-ringing icon: someone pinged while you're on another call
 - **Call window:** pixel portrait with a talking animation and waveform, live transcript, chips for "tasks started this call", and hang-up (Esc). Walking away also hangs up.
 - **Kanban board:** a whiteboard on the office wall. Walk up to it, or press B, to open the full board. A minimap version can stay on the HUD so the audience sees cards move during calls.
-- **Pings and results:** a toast in arcade style ("JAKE: fix is done!"). Opening it shows the result viewer, framed as a monitor or printout: the RESULT summary plus the PR/diff, `.pptx` or `.xlsx`.
+- **Pings and results:** a toast in arcade style ("DWIGHT: fix is done!"). Opening it shows the result viewer, framed as a monitor or printout: the RESULT summary plus the PR/diff, `.pptx` or `.xlsx`.
 - **Audio:** an AudioWorklet captures at 24 kHz PCM16 and plays assistant audio back. Local playback stops on the `barge_in` event.
 - **Engine:** up to the frontend owner. Cheap options are Phaser 3 or KAPLAY inside React, or plain React with a CSS tile grid. Walking only needs arrow keys and collision with walls.
 
@@ -200,12 +234,12 @@ These let all three streams start at once against mocks.
 - A owns the tool **schemas** and the router. B owns what the tools **return**.
 
 ## 8. Demo storyline (5 min, recorded, editable)
-1. **CEO:** "Give me the state of the company." Gets KPIs, Q4 progress, and "Oliver flagged a checkout bug that's blocking Acme Dental, and you have an investor email waiting."
-2. **Eng Lead:** "What happened with the bug?" Gets an explanation, then "What do you recommend?", then "Do it." It delegates to the Engineer, and the board card moves to *in progress*.
-3. **(Optional cut) Engineer:** "What are you doing right now?" Gets live status from the run.
-4. **Sales Lead:** pipeline update and strategy talk. It knows about the bug from call memory: "Once that checkout fix lands I can re-send Acme the quote." Then "Research 5 more clinic chains and build me a deck," which is delegated. → **ping arrives mid-call:** "Jake just pinged, the checkout fix is done."
-5. Open the result viewer and show the PR or diff with tests passing. Optionally, a quick CFO call: "What's Acme worth to our runway?" and "What did today's AI work cost?"
-6. Close on the deck result and the board, with everything done.
+1. **Michael:** "How's the branch doing?" He gives the numbers and Q4 progress, with a tangent. Then: "Ryan flagged something about Infinity being broken, and David Wallace emailed about Q4."
+2. **Ryan:** "What happened?" He explains the bulk discount isn't applied, which is blocking Lackawanna County. Then "What do you recommend?", then "Do it." He delegates to Dwight, and the whiteboard card moves to *in progress*.
+3. **(Optional cut) Dwight:** "What are you doing right now?" He answers with live run status, plus "Fixing Ryan's code. Again."
+4. **Jim:** pipeline and strategy talk. He knows about the bug from call memory: "Once that's fixed I'll re-send Lackawanna the quote." Then "Research 5 more Scranton-area businesses and build me a pitch deck," which is delegated. → **ping arrives mid-call:** "Dwight just messaged… he wants it on record he fixed it single-handedly."
+5. Open the result viewer and show the PR or diff with tests passing. Optionally, a quick Kevin call: "What's Lackawanna worth to us?" and "What did today's AI work cost?"
+6. Close on Jim's deck result and the whiteboard, with everything done.
 
 ## 9. Build order and workstreams
 
@@ -227,7 +261,7 @@ These let all three streams start at once against mocks.
   - each role's `AGENTS.md` (work-body instructions, including the `RESULT:` convention)
   - role YAMLs (personas, voices) and the `company/` seed data
   - `backend/company/` (mock first, then real)
-  - the `kestrel-book` repo with its bug and failing test
+  - the `dunder-mifflin-infinity` repo with its bug and failing test
   - the pptx/xlsx skills
   - TaskWatcher polling
 - **C. Frontend:**
@@ -250,14 +284,13 @@ These let all three streams start at once against mocks.
 |---|---|
 | Synthetic function_call injection rejected or awkward | Spike S2 first; fallback to a `user` notification message |
 | Claude Code too slow on camera | Small seeded bug with a failing test; video cuts; pre-warm the agent |
-| Preset voices unavailable in Realtime | Clone voices from TTS preset samples, or use `default` with persona styling |
+| Preset voices unavailable in Realtime, or only 3 male presets | Teammates record 10–30 s impressions and clone them (`POST /v1/audio/voices`); check `GET /v1/audio/voices` for more presets in S1 |
 | Concurrency limit or 5-minute idle close | Only one call at a time; reconnect on close |
 | Paperclip setup friction | Spike S3 tonight; seed by script so it can be recreated |
 | Tool selection gets worse with many tools | ≤ 6 voice tools per role; heavy work goes to the work body |
 
 ## 11. Calls I made (please check)
-- The fictional company, its names and numbers, and the checkout bug as the narrative thread.
-- Names and voice mapping for each persona.
+- Dunder Mifflin setup: Ryan as Eng Lead, the Infinity bulk-discount bug and the Lackawanna County deal as the narrative thread, and the voice mapping (Michael=`marcus`, Dwight=`jake`, Jim=`oliver`, Ryan=`default`, Kevin decided in S1; teammate clones are a stretch goal).
 - The gateway owns the Realtime session instead of the browser talking to Boson directly.
 - Completion is detected by polling Paperclip every 3 s, not with webhooks.
 - Most external SaaS is mocked behind tool functions. The only real ones are Claude Code, git/GitHub and `web_search`.
@@ -266,10 +299,12 @@ These let all three streams start at once against mocks.
 - The frontend is React + Vite + TS.
 
 ## 12. Layout (my call)
-- `backend/`: the voice gateway (extends `main.py`), plus `roles/*.yaml` and `company/` seed data.
+- `backend/gateway/`: the voice gateway (A). `backend/main.py` mounts it.
+- `backend/company/`: the company layer package (B). Seed data lives in `backend/company/data/`, and `TaskWatcher` lives in `backend/company/watcher.py`; B writes it and A wires it to the EventBus.
+- `backend/roles/*.yaml`: role configs (B writes the content; A's loader reads them).
 - `frontend/`: the React app.
 - `paperclip/seed.py` and `paperclip/agents/<role>/AGENTS.md`.
-- `../kestrel-book/`: a **separate git repo**, because the Engineer agent commits there. It is the `cwd` of the Engineer's Claude Code agent.
+- `../dunder-mifflin-infinity/`: a **separate git repo**, because the Engineer agent commits there. It is the `cwd` of the Engineer's Claude Code agent.
 - `artifacts/`: a shared output folder. Work-body agents write `.pptx`/`.xlsx` files here, and the gateway serves it at `/artifacts/*`. Its absolute path goes into each `AGENTS.md`.
 - All work-body agents (CFO and Sales included) use the `claude_local` adapter.
 
