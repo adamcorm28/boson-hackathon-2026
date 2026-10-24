@@ -2,6 +2,7 @@
 
 import json
 import logging
+import os
 import time
 import uuid
 from dataclasses import asdict, dataclass, field
@@ -14,7 +15,7 @@ from gateway.roles import Role
 
 log = logging.getLogger(__name__)
 
-CALLS_DIR = Path(__file__).parent.parent / "data" / "calls"
+CALLS_DIR = Path(os.getenv("CALLS_DIR", Path(__file__).parent.parent / "data" / "calls"))
 SUMMARY_MODEL = "claude-haiku-5-5"
 SUMMARY_PROMPT = "Summarize this call in 2 sentences for a colleague. Plain prose, no preamble."
 

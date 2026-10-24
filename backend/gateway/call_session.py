@@ -9,6 +9,7 @@ import asyncio
 import base64
 import json
 import logging
+import re
 import time
 from typing import AsyncIterator, Awaitable, Callable, Protocol
 
@@ -28,6 +29,17 @@ TRANSCRIPTION_MODEL = "higgs-stt-3.1"
 END_EVENTS = {"session.idle_timeout": "idle_timeout", "session.max_duration_reached": "max_duration_reached"}
 FATAL_ERROR_CODES = {"idle_timeout", "session_expired", "max_duration_reached", "rate_limit_exceeded", "unauthorized"}
 CLOSE_REASONS = {1013: "upstream_busy", 4429: "rate_limited"}
+# The voice model sometimes says work is underway without calling delegate_task.
+DELEGATION_CLAIM = re.compile(
+    r"(\bon it\b|ping you|\bassign|delegat|i'?ll (have|get) \w+|"
+    r"\b(he|she|they)('s| is| are) (started|starting|fixing|working|looking|building))",
+    re.IGNORECASE,
+)
+DELEGATION_NUDGE = (
+    "[notification from system, not the user] You just told the user the work is happening, but you "
+    "never called delegate_task, so nobody is working on it. Call delegate_task now with the right "
+    "assignee, title and brief. After it returns, say only a few words, like \"Done, he's started.\""
+)
 
 
 class Upstream(Protocol):
@@ -76,6 +88,10 @@ class CallSession:
         self._continuing = False  # tool output sent, waiting for the follow-up response
         self._inflight: TaskResult | None = None  # injected, awaiting its response.created
         self._reason = "ended"
+        self._delegated_this_turn = False  # delegate_task ran since the user last spoke
+        self._delegated_in_call = False
+        self._nudged_this_turn = False
+        self._response_text = ""  # transcript of the response in progress
 
     # --- lifecycle ----------------------------------------------------------------------
 
@@ -223,6 +239,7 @@ class CallSession:
                 await self._to_client({"type": "transcript.assistant.delta", "text": ev.get("delta", "")})
             case "response.output_audio_transcript.done":
                 text = ev.get("transcript", "")
+                self._response_text += " " + text
                 self.record.transcript.append((self.role.id, text))
                 await self._to_client({"type": "transcript.assistant.done", "text": text})
             case "conversation.item.input_audio_transcription.completed":
@@ -230,6 +247,7 @@ class CallSession:
                 self.record.transcript.append(("user", text))
                 await self._to_client({"type": "transcript.user", "text": text})
             case "response.created":
+                self._response_text = ""
                 self._continuing = False
                 self._inflight = None  # an injected notice is now being spoken
                 await self._to_client({"type": "agent.speaking", "value": True})
@@ -238,8 +256,11 @@ class CallSession:
                 log.debug("response.done status=%s output=%s", resp.get("status"),
                          [o.get("name") or o.get("type") for o in resp.get("output", [])])
                 await self._to_client({"type": "agent.speaking", "value": False})
-                await self._run_function_calls(ev.get("response", {}))
+                ran_tools = await self._run_function_calls(resp)
+                if not ran_tools:
+                    await self._guard_delegation()
             case "input_audio_buffer.speech_started":
+                self._delegated_this_turn = self._nudged_this_turn = False
                 if self._inflight is not None:  # user spoke before the notice started
                     self.queue.requeue_front(self._inflight)
                     self._inflight = None
@@ -255,11 +276,31 @@ class CallSession:
                 return True
         return False
 
-    async def _run_function_calls(self, response: dict) -> None:
-        calls = [o for o in response.get("output", [])
-                 if o.get("type") == "function_call" and o.get("executor", "client") == "client"]
-        if not calls:
+    async def _guard_delegation(self) -> None:
+        """If the agent claimed work is underway without delegating, make it delegate."""
+        if ("delegate_task" not in self.role.voice_tools or not self.role.can_delegate_to
+                or self._delegated_this_turn or self._nudged_this_turn or self._inflight
+                or not DELEGATION_CLAIM.search(self._response_text)):
             return
+        if self._delegated_in_call and re.search(r"\balready\b", self._response_text, re.IGNORECASE):
+            return  # talking about work it delegated earlier in this call
+        self._nudged_this_turn = True
+        log.info("agent claimed delegation without calling delegate_task; nudging")
+        await self._send_upstream({
+            "type": "conversation.item.create",
+            "item": {"type": "message", "role": "user", "content": [{"type": "input_text", "text": DELEGATION_NUDGE}]},
+        })
+        self._continuing = True
+        await self._send_upstream({"type": "response.create"})
+
+    async def _run_function_calls(self, response: dict) -> bool:
+        fcs = [o for o in response.get("output", []) if o.get("type") == "function_call"]
+        calls = [o for o in fcs if o.get("executor") in (None, "client")]  # executor may be absent or null
+        for o in fcs:
+            if o not in calls:
+                log.info("skipping %s function call %s", o.get("executor"), o.get("name"))
+        if not calls:
+            return False
         self._continuing = True
         for call in calls:
             name = call.get("name", "")
@@ -269,6 +310,8 @@ class CallSession:
                 args = {}
             await self._to_client({"type": "tool.called", "name": name, "args": args})
             output = await run_tool(name, args, self.ctx)
+            if name == "delegate_task" and output.get("status") == "started":
+                self._delegated_this_turn = self._delegated_in_call = True
             if name == "get_issue" and "error" not in output and args.get("task_id"):
                 self.record.touched_task_ids.add(args["task_id"])
             await self._send_upstream({
@@ -276,6 +319,7 @@ class CallSession:
                 "item": {"type": "function_call_output", "call_id": call.get("call_id"), "output": json.dumps(output)},
             })
         await self._send_upstream({"type": "response.create"})
+        return True
 
     async def _injector_loop(self) -> None:
         while True:

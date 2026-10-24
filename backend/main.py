@@ -8,6 +8,7 @@ Run with:  uvicorn main:app --reload
 """
 
 import asyncio
+import logging
 import os
 import ssl
 from typing import Literal, Optional
@@ -24,6 +25,7 @@ from pydantic import BaseModel
 
 # Load backend/.env regardless of the directory uvicorn is started from.
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
+logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"), format="%(levelname)s %(name)s: %(message)s")
 
 # Imported after load_dotenv: the gateway reads COMPANY_BACKEND / ROLES_DIR at import.
 from gateway import app_state as gateway_app_state  # noqa: E402
@@ -56,23 +58,20 @@ app.add_middleware(
 
 # Voice gateway: /roles /board /tasks /events /call/{role_id}, plus agent artifacts.
 app.include_router(gateway_http.router)
-ARTIFACTS_DIR = os.getenv(
-    "ARTIFACTS_DIR", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "artifacts")
-)
-os.makedirs(ARTIFACTS_DIR, exist_ok=True)
-app.mount("/artifacts", StaticFiles(directory=ARTIFACTS_DIR), name="artifacts")
+gateway_app_state.ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/artifacts", StaticFiles(directory=gateway_app_state.ARTIFACTS_DIR), name="artifacts")
 
 client = httpx.AsyncClient(headers=AUTH_HEADERS, timeout=120)
 
 
 @app.on_event("startup")
 async def start_gateway():
-    await gateway_app_state.start_watcher()
+    await gateway_app_state.startup()
 
 
 @app.on_event("shutdown")
 async def close_client():
-    await gateway_app_state.stop_watcher()
+    await gateway_app_state.shutdown()
     await client.aclose()
 
 

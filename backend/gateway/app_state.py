@@ -2,6 +2,7 @@
 
 import logging
 import os
+from pathlib import Path
 
 from company import get_company
 from company.types import CompanyAPI, CompanyUnavailable, Issue, TaskResult
@@ -10,8 +11,13 @@ from gateway.events import EventBus
 from gateway.injector import NotificationQueue
 from gateway.memory import CallMemory
 from gateway.roles import Role, load_roles
+from gateway.simulator import WorkSimulator
 
 log = logging.getLogger(__name__)
+
+REPO_DIR = Path(__file__).resolve().parent.parent.parent
+ARTIFACTS_DIR = Path(os.getenv("ARTIFACTS_DIR", REPO_DIR / "artifacts"))
+PUBLIC_URL = os.getenv("GATEWAY_PUBLIC_URL", "http://localhost:8000")
 
 bus: EventBus = EventBus()
 roles: dict[str, Role] = load_roles()
@@ -22,6 +28,7 @@ injection_mode: str = os.getenv("INJECTION_MODE", "user_message")
 connect_upstream = upstream.connect_boson
 active_call = None  # CallSession | None, set by the WS route
 watcher = None  # company.watcher.TaskWatcher once B9 lands
+simulator: WorkSimulator | None = None  # fake work bodies, mock company + SIMULATE_WORK_SECONDS only
 
 
 def _name(role_id: str | None) -> str:
@@ -59,13 +66,26 @@ async def on_complete(result: TaskResult) -> None:
         })
 
 
-async def start_watcher() -> None:
-    global watcher
+async def startup() -> None:
+    global watcher, simulator
     watcher = company_compat.make_watcher(company, on_update, on_complete)
     if watcher is not None:
         await watcher.start()
+    seconds = float(os.getenv("SIMULATE_WORK_SECONDS", "0") or 0)
+    if seconds > 0:
+        if not hasattr(company, "complete"):
+            log.warning("SIMULATE_WORK_SECONDS ignored: only works with COMPANY_BACKEND=mock")
+        else:
+            simulator = WorkSimulator(
+                company, roles, bus, on_update, on_complete, work_seconds=seconds,
+                artifacts_dir=ARTIFACTS_DIR, public_url=PUBLIC_URL,
+                announce_directly=lambda: watcher is None,
+            )
+            await simulator.start()
 
 
-async def stop_watcher() -> None:
+async def shutdown() -> None:
+    if simulator is not None:
+        await simulator.stop()
     if watcher is not None:
         await watcher.stop()

@@ -383,3 +383,69 @@ def test_call_route_end_to_end_with_fake_upstream(monkeypatch, roles, company, t
         ws.send_json({"type": "hangup"})
         assert ws.receive_json() == {"type": "call.ended", "reason": "hangup"}
     assert app_state.active_call is None
+
+
+async def test_null_executor_treated_as_client(harness):
+    harness.make("eng_lead")
+    await started(harness)
+    harness.upstream.feed({"type": "response.done", "response": {"output": [{
+        "type": "function_call", "name": "get_my_work", "call_id": "c9", "executor": None, "arguments": "{}",
+    }]}})
+    await until(lambda: any(e["type"] == "conversation.item.create" and e["item"].get("call_id") == "c9"
+                            for e in harness.upstream.sent))
+    harness.client.disconnect()
+    await harness.task
+
+
+def nudges(h) -> int:
+    return sum(e["type"] == "conversation.item.create" and "never called delegate_task" in json.dumps(e)
+               for e in h.upstream.sent)
+
+
+def say(text):
+    return [{"type": "response.created"},
+            {"type": "response.output_audio_transcript.done", "transcript": text},
+            {"type": "response.done", "response": {"output": []}}]
+
+
+async def test_claimed_delegation_without_tool_gets_nudged_once(harness):
+    harness.make("eng_lead")
+    await started(harness)
+    harness.upstream.feed(*say("Dwight's on it. I'll ping you when he's done."))
+    await until(lambda: nudges(harness) == 1)
+    assert harness.upstream.types()[-1] == "response.create"
+    harness.upstream.feed(*say("Dwight's on it."))  # same user turn: no second nudge
+    await asyncio.sleep(0.05)
+    assert nudges(harness) == 1
+    harness.upstream.feed({"type": "input_audio_buffer.speech_started"}, *say("He's on it."))
+    await until(lambda: nudges(harness) == 2)  # new user turn: guard re-arms
+    harness.client.disconnect()
+    await harness.task
+
+
+async def test_no_nudge_after_real_delegation(harness):
+    harness.make("eng_lead")
+    await started(harness)
+    harness.upstream.feed({"type": "response.created"}, {"type": "response.done", "response": {"output": [{
+        "type": "function_call", "name": "delegate_task", "call_id": "c1", "executor": "client",
+        "arguments": json.dumps({"assignee": "engineer", "title": "Fix it", "brief": "b"}),
+    }]}}, *say("Dwight's on it. I'll ping you."))
+    await until(lambda: "task.started" in harness.client.types())
+    await asyncio.sleep(0.05)
+    assert nudges(harness) == 0
+    # a later turn talking about the same work must not create a duplicate
+    harness.upstream.feed({"type": "input_audio_buffer.speech_started"}, *say("Dwight's already on it."))
+    await asyncio.sleep(0.05)
+    assert nudges(harness) == 0
+    harness.client.disconnect()
+    await harness.task
+
+
+async def test_no_nudge_for_plain_talk_or_non_delegators(harness):
+    harness.make("engineer")  # Dwight can't delegate
+    await started(harness)
+    harness.upstream.feed(*say("I'm on it. Beets first."))
+    await asyncio.sleep(0.05)
+    assert nudges(harness) == 0
+    harness.client.disconnect()
+    await harness.task
