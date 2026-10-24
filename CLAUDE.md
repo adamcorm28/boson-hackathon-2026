@@ -29,7 +29,7 @@ cp .env.example .env            # then set BOSON_API_KEY (and ANTHROPIC_API_KEY,
 .venv/bin/pytest tests/company/test_mock.py::test_create_task_marks_voice_origin -v   # one test
 ```
 
-Full local setup (venvs, demo repo, a local Paperclip at `:3100`, the seeded company): `scripts/setup_local.sh` (idempotent; see README.md). Each machine runs its own Paperclip; `paperclip_ids.json` is per-machine and optional, because the client finds the seeded company by name. Agent skills and their tests have their own venv: `paperclip/.venv/bin/pytest paperclip/tests`. The frontend will be Vite at `:5173`, with tests run by `npx vitest run`.
+`make` lists common commands (`make setup`, `make test`, `make gateway`, `make seed`, `make reset-repo`, `make paperclip-start|stop|status|logs`). Full local setup (venvs, demo repo, a local Paperclip at `:3100`, the seeded company): `make setup` = `scripts/setup_local.sh` (idempotent; see README.md). Each machine runs its own Paperclip; `paperclip_ids.json` is per-machine and optional, because the client finds the seeded company by name. Agent skills and their tests have their own venv: `paperclip/.venv/bin/pytest paperclip/tests`. The frontend will be Vite at `:5173`, with tests run by `npx vitest run`.
 
 ## Architecture
 

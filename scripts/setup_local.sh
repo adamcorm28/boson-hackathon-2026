@@ -75,7 +75,7 @@ else
     sleep 1
   done
   curl -sf "$PAPERCLIP_URL/api/health" >/dev/null || fail "Paperclip didn't come up; see $PAPERCLIP_LOG"
-  echo "running (stop it with: pkill -f paperclipai)"
+  echo "running (stop it with: make paperclip-stop)"
 fi
 
 step "Seeding Dunder Mifflin"
