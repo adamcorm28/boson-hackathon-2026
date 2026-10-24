@@ -1,7 +1,7 @@
 // The office floor: tiles, desks with their employees, and you. Thin rendering over map.ts/movement.ts.
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AgentState, Role } from "../api/types";
-import { INTERN_LOOKS, lookFor, PLAYER_LOOK } from "../art/looks";
+import { lookFor, PLAYER_LOOK } from "../art/looks";
 import { Sprite } from "../art/Sprite";
 import { createWorld, TICK_MS, tickWorld } from "./ambient";
 import { layoutDesks, MAP_HEIGHT, MAP_WIDTH, OFFICE_MAP, START, type Pos } from "./map";
@@ -69,11 +69,11 @@ export function Office({
   const posRef = useRef(pos);
   posRef.current = pos;
 
-  // Ambient life (interns and quips). Q toggles it, e.g. for clean demo takes.
+  // Ambient one-liners. Q toggles them (and the jello), e.g. for clean demo takes.
   const [quirks, setQuirks] = useState(true);
   const [world, setWorld] = useState(createWorld);
-  const ambientEnv = useRef({ desks, names: {} as Record<string, string>, busy: activeRoleId });
-  ambientEnv.current = { desks, names: Object.fromEntries(roles.map((r) => [r.id, firstName(r)])), busy: activeRoleId };
+  const ambientEnv = useRef({ desks, busy: activeRoleId });
+  ambientEnv.current = { desks, busy: activeRoleId };
   useEffect(() => {
     if (!quirks || desks.length === 0) return;
     const t = setInterval(() => setWorld((w) => tickWorld(w, ambientEnv.current, Math.random)), TICK_MS);
@@ -184,7 +184,6 @@ export function Office({
           const hasResult = (bang[d.roleId]?.length ?? 0) > 0;
           const working = agents[d.roleId] === "working";
           const quip = quirks && !onCall ? world.bubbles.find((b) => b.key === `role:${d.roleId}`) : undefined;
-          const hasCoffee = quirks && (world.coffee[d.roleId] ?? 0) > world.tick;
           // Priority above their head: "!" > a quip > the nameplate.
           let above = null;
           if (hasResult) above = <div className="bang" title="Has a finished result for you">!</div>;
@@ -202,30 +201,12 @@ export function Office({
               <div className="desk" style={{ left: d.x * TILE, top: d.y * TILE, zIndex: d.y * 10 + 2 }}>
                 <div className={`monitor ${working ? "on" : ""}`} title={working ? "Working" : undefined} />
                 {ringing[d.roleId] && <div className="phone" title="Ringing" />}
-                {hasCoffee && <div className="cup" title="Coffee" />}
                 {quirks && role?.desk === "dwight_desk" && <div className="jello" title="A stapler in jello" />}
               </div>
             </div>
           );
         })}
 
-        {quirks &&
-          world.interns.map((intern) => {
-            const speech = world.bubbles.find((b) => b.key === `npc:${intern.id}`);
-            const carrying = intern.mode === "delivering" || intern.mode === "handing";
-            return (
-              <div
-                key={intern.id}
-                className="npc"
-                title={`Intern ${intern.name}`}
-                style={{ left: intern.pos.x * TILE + 4, top: intern.pos.y * TILE - 6, zIndex: intern.pos.y * 10 + 4 }}
-              >
-                {speech && <div className="speech">{speech.text}</div>}
-                <Sprite look={INTERN_LOOKS[intern.id] ?? PLAYER_LOOK} pixel={2.4} stepping={world.tick % 2 === 0 && intern.path.length > 0} />
-                {carrying && <div className="carry-cup" />}
-              </div>
-            );
-          })}
 
 
         <div className="player" style={{ left: pos.x * TILE + 1, top: pos.y * TILE - 12, zIndex: pos.y * 10 + 5 }}>
