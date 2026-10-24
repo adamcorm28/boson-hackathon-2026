@@ -60,3 +60,9 @@ async def test_fail_hook_sets_failed_reason(c):
     c.fail(tid, "acpx_turn_failed")
     assert (await c.get_issue(tid)).failed_reason == "acpx_turn_failed"
     assert (await c.get_issue("DM-101")).failed_reason is None
+
+
+async def test_research_task_kind(c):
+    tid = await c.create_task("cfo", "Research: competitor financials", "q", "cfo", kind="research")
+    assert (await c.get_issue(tid)).kind == "research"
+    assert (await c.get_issue("DM-101")).kind == "task"

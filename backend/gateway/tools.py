@@ -4,12 +4,18 @@ Tools never raise: any failure becomes {"error": "<sentence the model can say>"}
 """
 
 import logging
+import os
 from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Awaitable, Callable
 
+from company.results import read_brief
 from company.types import ROLE_IDS, CompanyAPI, CompanyUnavailable, Issue
 from gateway import company_compat
 from gateway.roles import Role
+
+# Same default as app_state.ARTIFACTS_DIR (repo/artifacts); research briefs are read from here.
+ARTIFACTS_DIR = Path(os.getenv("ARTIFACTS_DIR", Path(__file__).resolve().parents[2] / "artifacts"))
 
 log = logging.getLogger(__name__)
 
@@ -57,6 +63,13 @@ TOOL_SCHEMAS: dict[str, dict] = {
         "lookup_company", "Search the company handbook (products, pricing, policies, org).",
         {"topic": {**_STR, "description": "what to look up"}}),
     "web_search": {"type": "web_search"},
+    "research": _fn(
+        "research",
+        "Start in-depth research that runs in the background on a stronger model (web research, competitors, "
+        "market and industry questions, best practices, anything needing real analysis). Returns at once; "
+        "you get pinged with the findings, usually within a few minutes.",
+        {"question": {**_STR, "description": "the full question, with any context the user gave"},
+         "topic": {**_STR, "description": "3-6 word title, e.g. 'competitor financials'"}}),
 }
 
 
@@ -96,6 +109,19 @@ async def _delegate(args: dict, ctx: CallContext) -> dict:
     return {"task_id": task_id, "status": "started", "assignee_name": _name(ctx, assignee), "eta_hint": "a few minutes"}
 
 
+async def _research(args: dict, ctx: CallContext) -> dict:
+    question = (args.get("question") or "").strip()
+    if not question:
+        return {"error": "Research needs a question."}
+    topic = (args.get("topic") or question[:60]).strip()
+    title = f"Research: {topic}"
+    brief = f"{question}\n\nThis is a research task: follow 'Research tasks' in your instructions."
+    task_id = await ctx.company.create_task(ctx.role.id, title, brief, ctx.role.id, kind="research")
+    await ctx.on_task_started(task_id, title, ctx.role.id)
+    return {"task_id": task_id, "status": "started", "eta_hint": "a few minutes",
+            "what_to_say": "Say you're digging into it and will bring the findings back, then keep the conversation going."}
+
+
 async def _dispatch(name: str, args: dict, ctx: CallContext) -> dict:
     dt = company_compat.data_tools()
     match name:
@@ -108,9 +134,16 @@ async def _dispatch(name: str, args: dict, ctx: CallContext) -> dict:
             return {"tasks": [_card(ctx, i) for i in issues if i.status != "cancelled"]}
         case "get_issue":
             i = await ctx.company.get_issue(args.get("task_id", ""))
-            return {**_card(ctx, i), "description": i.description,
-                    "requested_by": _name(ctx, i.requested_by_role),
-                    "comments": [{"author": _name(ctx, c.author_role), "body": c.body} for c in i.comments[-5:]]}
+            out = {**_card(ctx, i), "description": i.description,
+                   "requested_by": _name(ctx, i.requested_by_role),
+                   "comments": [{"author": _name(ctx, c.author_role), "body": c.body} for c in i.comments[-5:]]}
+            if parsed := company_compat.parse_result(i.comments):
+                out["result"], artifacts = parsed
+                if details := read_brief(artifacts, ARTIFACTS_DIR):
+                    out["details"] = details  # the full research brief, to discuss the findings
+            return out
+        case "research":
+            return await _research(args, ctx)
         case "get_my_work":
             status = await ctx.company.get_agent_status(ctx.role.id)
             issues = await ctx.company.list_issues(role=ctx.role.id)

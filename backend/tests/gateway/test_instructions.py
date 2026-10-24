@@ -67,3 +67,17 @@ async def test_briefing_lists_delegation_targets(roles, company):
     assert 'Dwight Schrute: assignee "engineer"' in text
     dwight = await build_briefing(roles["engineer"], company, [], [], roles)
     assert 'Dwight Schrute: assignee "engineer" (your own work body' in dwight
+
+
+def test_tool_rules_route_outside_questions_to_research():
+    from gateway.instructions import TOOL_RULES
+    assert "research" in TOOL_RULES
+    assert "competitors" in TOOL_RULES and "our own business" in TOOL_RULES
+
+
+async def test_briefing_lists_finished_research(roles, company):
+    tid = await company.create_task("cfo", "Research: finance tools", "q", "cfo", kind="research")
+    company.complete(tid, "Three tools stand out.")
+    text = await build_briefing(roles["cfo"], company, [], [], roles)
+    assert "## Research you finished recently" in text
+    assert "Research: finance tools" in text and "Three tools stand out." in text

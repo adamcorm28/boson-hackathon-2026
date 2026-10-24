@@ -1,5 +1,6 @@
 """Session instructions: persona + speaking style + tool rules + live briefing (spec §5.1)."""
 
+from gateway.company_compat import parse_result
 from company.types import CompanyAPI, CompanyUnavailable, TaskResult
 from gateway.roles import Role
 
@@ -14,8 +15,14 @@ SPEAKING_STYLE = """\
 
 TOOL_RULES = """\
 ## Tools
-- Questions about the business (how the branch or sales are doing, numbers, the board, your inbox, deals, \
-money, what someone is working on) always start with a tool call. Never answer them from memory, not even roughly.
+- Questions about our own business (how the branch or sales are doing, our numbers, the board, your inbox, \
+our deals and money, what someone is working on) always start with a tool call. Never answer them from memory, \
+not even roughly.
+- Questions about the outside world (competitors, their financials, the market, industry tools and trends, \
+news, best practices) or that need real, in-depth analysis go to research: call it, say you're digging in, \
+and keep talking. Never answer those with our own company numbers, and don't guess.
+- When research results come back, share the headline and offer to go through them; get_issue on that task \
+gives the full findings.
 - Use delegate_task for anything that takes more than a few seconds: fixes, research, decks, spreadsheets, emails.
 - When the user asks for work to be done, call delegate_task first. Never say it's handled, or that someone \
 is on it, unless delegate_task returned "started".
@@ -70,6 +77,19 @@ async def build_briefing(
             "## Your recent calls with the user\n"
             "(Notes only. Work counts as delegated only if it's in your open work or on the board.)\n"
             + "\n".join(f"- {c}" for c in recent_calls[:3]))
+
+    if issues is not None:
+        done_research = [i for i in issues if i.assignee_role == role.id and i.kind == "research" and i.status == "done"][-3:]
+        lines = []
+        for i in done_research:
+            try:
+                parsed = parse_result((await company.get_issue(i.task_id)).comments)
+            except (KeyError, CompanyUnavailable):
+                parsed = None
+            if parsed:
+                lines.append(f"- {i.title} (id {i.task_id}): {parsed[0]}")
+        if lines:
+            sections.append("## Research you finished recently (get_issue gives the full findings)\n" + "\n".join(lines))
 
     if pending:
         lines = [f"- {r.title}, from {name(r.from_role)}: {r.summary}" for r in pending]

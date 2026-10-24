@@ -37,3 +37,18 @@ def test_parse_result_multiline_summary_stops_at_trailing_content():
 
 def test_parse_result_tolerates_leading_whitespace():
     assert parse_result([c("\n  RESULT: Done.")]) == ("Done.", [])
+
+
+def test_read_brief_reads_linked_markdown_artifact(tmp_path):
+    from company.results import read_brief
+    (tmp_path / "finance-tools.md").write_text("# Findings\n" + "x" * 5000)
+    artifacts = [Artifact("link", "http://localhost:8000/artifacts/finance-tools.md", "Brief"),
+                 Artifact("pptx", "http://localhost:8000/artifacts/deck.pptx", "Deck")]
+    text = read_brief(artifacts, tmp_path)
+    assert text.startswith("# Findings") and len(text) <= 4000
+
+
+def test_read_brief_none_without_markdown(tmp_path):
+    from company.results import read_brief
+    assert read_brief([Artifact("diff", "http://x/artifacts/a.diff", "d")], tmp_path) is None
+    assert read_brief([Artifact("link", "http://x/artifacts/missing.md", "m")], tmp_path) is None

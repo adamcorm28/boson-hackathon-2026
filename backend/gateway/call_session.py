@@ -410,7 +410,7 @@ class CallSession:
                 args = {}
             await self._to_client({"type": "tool.called", "name": name, "args": args})
             output = await run_tool(name, args, self.ctx)
-            if name == "delegate_task" and output.get("status") == "started":
+            if name in ("delegate_task", "research") and output.get("status") == "started":
                 self._delegated_this_turn = True
             if name == "get_issue" and "error" not in output and args.get("task_id"):
                 self.record.touched_task_ids.add(args["task_id"])

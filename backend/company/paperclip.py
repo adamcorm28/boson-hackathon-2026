@@ -36,7 +36,10 @@ PRICES_PER_MTOK = {
     "claude-sonnet-5-5": (2.00, 0.10, 10.00),
     "claude-fable-5-1": (10.00, 0.25, 50.00),
 }
-DEFAULT_PRICING_MODEL = "claude-opus-5"  # what the agents run (see DEFAULT_AGENT_MODEL in paperclip/seed.py)
+DEFAULT_PRICING_MODEL = "claude-opus-5"
+# Research runs on a stronger model. Paperclip's bundled Claude Code can't run Opus 5.5, so research
+# tasks override the adapter to the "cli" engine (the installed `claude`), which can.
+DEFAULT_RESEARCH_MODEL = "claude-opus-5-5"  # what the agents run (see DEFAULT_AGENT_MODEL in paperclip/seed.py)
 _FOOTER = re.compile(r"\n\n---\n((?:[a-z_]+: [^\n]*\n?)+)\s*$")
 
 
@@ -117,6 +120,7 @@ class PaperclipCompany:
             description=description,
             comments=comments or [],
             updated_at=raw.get("updatedAt", ""),
+            kind="research" if footer.get("kind") == "research" else "task",
         )
 
     def _comment(self, raw: dict) -> Comment:
@@ -159,14 +163,20 @@ class PaperclipCompany:
             return None
         return latest.get("errorCode") or latest.get("error") or latest["status"]
 
-    async def create_task(self, assignee_role: str, title: str, brief: str, requested_by_role: str) -> str:
+    async def create_task(self, assignee_role: str, title: str, brief: str, requested_by_role: str,
+                          kind: str = "task") -> str:
         await self._ensure_ids()
-        raw = await self._request("POST", f"/api/companies/{self.ids['company_id']}/issues", json={
+        footer = f"\n\n---\norigin: voice\nrequested_by: {requested_by_role}" + ("\nkind: research" if kind == "research" else "")
+        body = {
             "title": title,
-            "description": f"{brief}\n\n---\norigin: voice\nrequested_by: {requested_by_role}",
+            "description": brief + footer,
             "status": "todo",
             "assigneeAgentId": self.ids["agents"][assignee_role],  # assigning wakes the agent
-        })
+        }
+        if kind == "research":
+            model = os.getenv("RESEARCH_MODEL", DEFAULT_RESEARCH_MODEL)
+            body["assigneeAdapterOverrides"] = {"adapterConfig": {"engine": "cli", "model": model}}
+        raw = await self._request("POST", f"/api/companies/{self.ids['company_id']}/issues", json=body)
         return raw["identifier"]
 
     async def add_comment(self, task_id: str, body: str) -> None:

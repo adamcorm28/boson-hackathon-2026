@@ -24,6 +24,14 @@ The repo is `{DEMO_REPO}` (a Node project; tests use Node's built-in runner, no 
    - `ARTIFACT: pr <the PR url gh printed> Pull request` (only if you opened one)
 - Say in the summary what was broken, what you changed and that all tests pass.
 
+## Research tasks
+Tasks titled "Research: …" are questions you answer with real research, not company data alone.
+- Use web search and fetch several current, reputable sources. Compare them; note where they disagree.
+- Bring it back to Dunder Mifflin Scranton: what it means for us, with numbers from `{COMPANY_DATA_DIR}` where relevant.
+- Write a brief to `{ARTIFACTS_DIR}/research-<slug>.md`: the answer up top, then key findings as bullets, then what we should do, then the sources as links.
+- Link it as `ARTIFACT: link {GATEWAY_PUBLIC_URL}/artifacts/research-<slug>.md Research brief`.
+- The RESULT summary gives the headline findings in plain spoken English. The brief holds the details, for when the user wants to go deeper.
+
 ## When you are done
 Post exactly one comment on the issue, in this form:
 

@@ -34,10 +34,12 @@ def test_required_keys_and_id_matches_filename(raw):
         assert role["id"] == stem
 
 
-def test_voice_tools_known_and_max_six(raw):
+def test_voice_tools_known_and_max_eight(raw):
     for stem, role in raw.items():
         assert set(role["voice_tools"]) <= VOICE_TOOL_NAMES, stem
-        assert len(role["voice_tools"]) <= 6, stem
+        assert len(role["voice_tools"]) <= 8, stem
+        # research plus get_issue, so findings can be discussed in depth when they come back
+        assert {"research", "get_issue"} <= set(role["voice_tools"]), stem
 
 
 def test_reports_to_tree(raw):
