@@ -126,6 +126,13 @@ def test_agents_md_only_known_placeholders(agents_md):
         assert set(re.findall(r"\{([A-Z_]+)\}", text)) <= PLACEHOLDERS, role
 
 
+def test_agents_md_result_summary_is_short_and_spoken(agents_md):
+    # Dry run: Dwight's first RESULT was ~100 words and read out "item DM one oh one" on the call.
+    for role, text in agents_md.items():
+        assert "at most 3 short sentences, under 60 words" in text, role
+        assert "no task IDs" in text, role
+
+
 def test_agents_md_competent_team_rule(agents_md):
     for role, text in agents_md.items():
         assert "flavor, not friction" in text, role

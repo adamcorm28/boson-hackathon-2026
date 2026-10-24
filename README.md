@@ -41,7 +41,7 @@ Each teammate gets their own separate company and board. The recorded demo runs 
 **Day to day:**
 - `make paperclip-status`, `make paperclip-start`, `make paperclip-stop`, `make paperclip-logs`
 - `make seed` re-seeds after editing personas, `AGENTS.md` or seed data.
-- `make reset-repo` puts the demo repo back at the bug between takes.
+- `make reset-demo` does a full reset between takes: Paperclip tasks, runs and agent sessions, the demo repo, GitHub PRs and branches, artifacts and call logs, then re-seeds. `make reset-repo` only resets the demo repo.
 
 ## Tests
 

@@ -91,6 +91,26 @@ On the throwaway task "Write a haiku about paper":
   2. `PUT /api/agents/{id}/instructions-bundle/file` with `{path, content, baseRevisionId: revision.id}`. Without `baseRevisionId` it returns `422 INSTRUCTION_BASE_REQUIRED`.
 - **The issue prefix comes from the company name** and can't be set. Ours is `DUNA` because another company already holds `DUN`. Seed IDs (`DM-101`…) map to Paperclip IDs through `paperclip_ids.json` → `issues`.
 
+## Dry runs (B10, 2026-10-24 ~01:30 EDT)
+
+| Run | Time to RESULT | Notes |
+|---|---|---|
+| Dwight fixes the bulk-discount bug | **51 s** | Root cause found, one-line fix, 4/4 tests, real PR + diff |
+| Jim researches 5 prospects + deck | **130 s** | 6-slide `.pptx` + research brief with sources |
+| Dwight again, after `make reset-demo` | **12.8 min** | Fresh session (reset works); every model call took 2–3 min, see below |
+| Kevin smoke task | 33 s, later 91 s | Same tiny task, different API latency |
+
+- **API latency spikes are external.** In the slow run, the transcript shows 23 small model calls (86–718 output tokens each). The first ones returned in seconds, then each took 2–3 minutes with no errors logged. A standalone `claude -p` call right afterwards returned in 7 s. Nothing in our code or Paperclip caused it.
+  - **For the recording:** run Dwight's fix as its own take, retake if it's slow, and cut the waiting in the edit.
+- **Paperclip's bundled Claude Code is 2.1.257**, not the system install. It **rejects `claude-opus-5-5`** (`400 … version 2.1.280 or newer is required`), and its `opus` default resolves to `claude-opus-5`. The seed now pins `adapterConfig.model = claude-opus-5` (`AGENT_MODEL` overrides it).
+- **A failed run leaves the task waiting.** That run failed with `errorCode: acpx_turn_failed`, but no RESULT comment was posted, so the watcher just keeps waiting. It doesn't detect failed runs.
+- **Pricing (live page, 2026-10-24), per MTok as input / cache hits / output:**
+  - Opus 5: $5 / $0.50 / $25
+  - Opus 5.5: $4 / $0.20 / $20
+  - Sonnet 5.5: $2 / **$0.10** / $10 (the cached skill table said $0.20)
+  - Fable 5.1: $10 / $0.25 / $50
+- **Cost observed:** one trivial Kevin task came to about 300k tokens, mostly Claude Code's own startup context. That's about $0.29 at Opus 5.5 prices.
+
 ## Cleanup
 
 The throwaway company "Spike Co (throwaway)" was deleted after this spike.

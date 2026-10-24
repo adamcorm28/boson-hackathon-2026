@@ -146,7 +146,7 @@ async def test_get_costs_reports_billed_cents_and_tokens(pc):
 
 
 async def test_get_costs_includes_api_list_price_estimate(pc, monkeypatch):
-    monkeypatch.delenv("PAPERCLIP_PRICING_MODEL", raising=False)
+    monkeypatch.setenv("PAPERCLIP_PRICING_MODEL", "claude-opus-5-5")
     est = (await pc.get_costs())["estimate"]
     # Claude Opus 5.5 list prices: $4/M input, $0.20/M cached input, $20/M output
     assert est["model"] == "claude-opus-5-5"
@@ -159,7 +159,16 @@ async def test_get_costs_estimate_with_other_pricing_model(pc, monkeypatch):
     monkeypatch.setenv("PAPERCLIP_PRICING_MODEL", "claude-sonnet-5-5")
     est = (await pc.get_costs())["estimate"]
     assert est["model"] == "claude-sonnet-5-5"
-    assert est["total_usd"] == 0.007  # 1500*$2/M + 5000*$0.20/M + 300*$10/M
+    assert est["total_usd"] == 0.0065  # 1500*$2/M + 5000*$0.10/M + 300*$10/M (live pricing page)
+
+
+async def test_get_costs_default_estimate_is_opus_5(pc, monkeypatch):
+    # The agents run claude-opus-5 (Paperclip's bundled Claude Code can't run Opus 5.5).
+    monkeypatch.delenv("PAPERCLIP_PRICING_MODEL", raising=False)
+    est = (await pc.get_costs())["estimate"]
+    assert est["model"] == "claude-opus-5"
+    assert est["by_role_usd"] == {"engineer": 0.0125, "sales_lead": 0.005}  # $5/M in, $0.50/M cached, $25/M out
+    assert est["total_usd"] == 0.0175
 
 
 async def test_get_costs_unknown_pricing_model_skips_estimate(pc, monkeypatch):
