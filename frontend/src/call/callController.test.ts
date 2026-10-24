@@ -77,6 +77,18 @@ describe("startCall", () => {
     expect(t.sock.socket.sent).toEqual([frame]);
   });
 
+  it("muting drops mic frames until unmuted", async () => {
+    const t = setup();
+    await flush();
+    const frame = new ArrayBuffer(1920);
+    t.call.setMuted(true);
+    t.micFrame()?.(frame);
+    expect(t.sock.socket.sent).toEqual([]);
+    t.call.setMuted(false);
+    t.micFrame()?.(frame);
+    expect(t.sock.socket.sent).toEqual([frame]);
+  });
+
   it("barge_in stops local playback straight away", () => {
     const t = setup();
     t.sock.emit({ type: "barge_in" });
@@ -100,6 +112,38 @@ describe("startCall", () => {
     // nothing leaks through after the close
     t.sock.audio(new ArrayBuffer(10));
     expect(t.player.enqueue).not.toHaveBeenCalled();
+  });
+
+  it("plays avatar clips and drops them on barge_in", () => {
+    const t = setup();
+    const clips = { video: {} as HTMLVideoElement, enqueue: vi.fn(), stop: vi.fn(), playing: true };
+    const media = { appendChild: vi.fn() } as unknown as HTMLElement;
+    const call = startCall(t.gateway, "ceo", () => {}, {
+      audio: { ...t.audio, createClipPlayer: () => clips, createMedia: () => media },
+    });
+    expect(call.media).toBe(media);
+    expect(media.appendChild).toHaveBeenCalledWith(clips.video);
+    t.sock.emit({ type: "avatar.clip", url: "http://gw/avatar/clips/1", duration: 2 });
+    expect(clips.enqueue).toHaveBeenCalledWith("http://gw/avatar/clips/1");
+    expect(call.playing).toBe(true);
+    t.sock.emit({ type: "barge_in" });
+    expect(clips.stop).toHaveBeenCalled();
+  });
+
+  it("joins the live avatar room once and leaves it when the call closes", () => {
+    const t = setup();
+    const view = { video: {} as HTMLVideoElement, close: vi.fn() };
+    const join = vi.fn(() => view);
+    const media = { appendChild: vi.fn() } as unknown as HTMLElement;
+    startCall(t.gateway, "ceo", () => {}, { audio: { ...t.audio, joinLiveAvatar: join, createMedia: () => media } });
+    const room = { type: "avatar.room", url: "wss://x.livekit.cloud", token: "jwt", avatar_identity: "boson-avatar" } as const;
+    t.sock.emit(room);
+    t.sock.emit(room);
+    expect(join).toHaveBeenCalledTimes(1);
+    expect(join).toHaveBeenCalledWith("wss://x.livekit.cloud", "jwt", "boson-avatar");
+    expect(media.appendChild).toHaveBeenCalledWith(view.video);
+    t.sock.close(1000);
+    expect(view.close).toHaveBeenCalled();
   });
 
   it("hangup asks the socket to hang up", () => {

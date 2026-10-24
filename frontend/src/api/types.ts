@@ -33,6 +33,14 @@ export interface Role {
   voice: string;
   sprite?: string | null;
   desk?: string | null; // named spot, e.g. "jim_desk"; missing/unknown = auto-placed
+  /** Still face from backend/data/avatars/; when set, the call shows it instead of the pixel portrait. */
+  avatar_url?: string | null;
+  /** Muted talking clip of that face, looped while the agent speaks (null in the gateway's sync mode). */
+  avatar_loop_url?: string | null;
+  /** Muted listening loop of that face (blinks, small moves), played whenever it isn't talking. */
+  avatar_idle_url?: string | null;
+  /** Boson live avatar: the call sends `avatar.room` and the voice plays from that room, lip-synced. */
+  avatar_live?: boolean;
 }
 
 export interface Card {
@@ -94,10 +102,14 @@ export const CALL_EVENT_TYPES = [
   "barge_in",
   "tool.called",
   "task.started",
+  "avatar.clip",
+  "avatar.room",
+  "avatar.unavailable",
   "call.ended",
 ] as const;
 
-/** JSON text frames from the gateway. Binary frames are PCM16 24 kHz mono assistant audio. */
+/** JSON text frames from the gateway. Binary frames are PCM16 24 kHz mono assistant audio
+ *  (for a role with an avatar, replies come as `avatar.clip` MP4s with the audio inside instead). */
 export type CallEvent =
   | { type: "call.started"; role: string }
   | { type: "transcript.user"; text: string }
@@ -107,6 +119,11 @@ export type CallEvent =
   | { type: "barge_in" }
   | { type: "tool.called"; name: string; args: Record<string, unknown> }
   | { type: "task.started"; task_id: string; title: string; assignee_role: string }
+  | { type: "avatar.clip"; url: string; duration: number }
+  /** LiveKit room where the live avatar publishes its video and voice; join with this subscribe-only token. */
+  | { type: "avatar.room"; url: string; token: string; avatar_identity: string }
+  /** The live avatar couldn't start (busy: Boson had no free slot); the call continues as plain audio. */
+  | { type: "avatar.unavailable"; reason: "busy" | "error" }
   | { type: "call.ended"; reason: string };
 
 /** Close code the gateway uses when a second call is opened while one is active. */

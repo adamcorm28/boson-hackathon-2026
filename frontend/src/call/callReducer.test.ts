@@ -116,4 +116,9 @@ describe("callReducer", () => {
     const ended = live({ type: "closed", code: 1000 });
     expect(callReducer(ended, { type: "transcript.assistant.delta", text: "late" })).toBe(ended);
   });
+
+  it("avatar.unavailable explains the missing video", () => {
+    const s = callReducer({ ...initialCallState, status: "live", roleId: "ceo" }, { type: "avatar.unavailable", reason: "busy" });
+    expect(s.videoNotice).toMatch(/busy/);
+  });
 });

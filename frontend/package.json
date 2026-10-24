@@ -13,6 +13,7 @@
     "check:gateway": "NODE_OPTIONS=--experimental-eventsource vite-node scripts/check-gateway.ts"
   },
   "dependencies": {
+    "livekit-client": "2.15.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

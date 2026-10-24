@@ -11,13 +11,16 @@ import json
 import logging
 import re
 import time
+from pathlib import Path
 from typing import AsyncIterator, Awaitable, Callable, Protocol
 
 import websockets
 
 from company.types import TaskResult
+from gateway.avatar import AvatarStage
 from gateway.events import EventBus
-from gateway.injector import NotificationQueue, TurnState, injection_events
+from gateway.injector import PCM_BYTES_PER_S, NotificationQueue, TurnState, injection_events
+from gateway.live_avatar import LiveAvatar
 from gateway.instructions import build_briefing, build_instructions
 from gateway.memory import CallMemory, CallRecord
 from gateway.roles import Role
@@ -85,6 +88,9 @@ class CallSession:
         mode: str = "user_message",
         clock: Callable[[], float] = time.monotonic,
         tick: float = 0.25,
+        avatar_image: Path | None = None,
+        public_url: str = "",
+        live_avatar: LiveAvatar | None = None,
     ):
         self.role = role
         self.client = client_ws
@@ -109,6 +115,15 @@ class CallSession:
         self._lookup_nudged_this_turn = False
         self._response_text = ""  # transcript of the response in progress
         self._last_user_text = ""
+        # With a reference image, replies are held back and sent as lip-synced clips (gateway/avatar.py).
+        self.avatar: AvatarStage | None = None
+        # A live avatar gets the agent's speech instead of the browser (gateway/live_avatar.py).
+        self.live: LiveAvatar | None = live_avatar
+        self._live_start: asyncio.Task | None = None
+        if avatar_image is not None:
+            self.avatar = AvatarStage(
+                avatar_image, self._to_client, self._audio_to_client, public_url,
+                on_clip=lambda seconds: self.turn.on_audio(int(seconds * PCM_BYTES_PER_S), self.clock()))
 
     # --- lifecycle ----------------------------------------------------------------------
 
@@ -124,6 +139,8 @@ class CallSession:
             await self._send_upstream(self._session_update(instructions))
             await self._send_upstream({"type": "response.create"})  # the greeting (in the session instructions)
             await self._to_client({"type": "call.started", "role": self.role.id})
+            if self.live is not None:
+                self._live_start = asyncio.create_task(self._start_live_avatar())
             self.bus.publish("agent.status", {"role": self.role.id, "state": "on_call"})
 
             tasks = [asyncio.create_task(c) for c in
@@ -146,6 +163,13 @@ class CallSession:
     async def _shutdown(self) -> None:
         if self._inflight is not None:  # injected but never spoken
             self.queue.requeue_front(self._inflight)
+        if self.avatar is not None:
+            await self.avatar.close()
+        if self._live_start is not None:
+            self._live_start.cancel()
+            await asyncio.gather(self._live_start, return_exceptions=True)
+        if self.live is not None:
+            await self.live.close()
         if self.upstream is not None:
             try:
                 await self.upstream.close()
@@ -197,6 +221,29 @@ class CallSession:
             await self.client.send_bytes(pcm)
         except Exception:
             self._client_open = False
+
+    async def _start_live_avatar(self) -> None:
+        """Put the avatar in its room and tell the browser to watch it. On failure the call carries
+        on with plain audio, including any speech queued while the avatar was starting."""
+        try:
+            room = await self.live.start()
+        except Exception as e:
+            log.warning("live avatar failed, using plain audio: %r", e)
+            live, self.live = self.live, None
+            for pcm in live.drain():
+                await self._audio_to_client(pcm)
+            await live.close()
+            busy = "429" in str(e) or "503" in str(e)
+            await self._to_client({"type": "avatar.unavailable", "reason": "busy" if busy else "error"})
+            return
+        await self._to_client({"type": "avatar.room", **room})
+
+    async def _assistant_text(self, event: dict) -> None:
+        """With an avatar, the agent's words show up with its clip, not before the voice."""
+        if self.avatar is not None:
+            self.avatar.hold_event(event)
+        else:
+            await self._to_client(event)
 
     async def _on_task_started(self, task_id: str, title: str, assignee_role: str) -> None:
         self.record.touched_task_ids.add(task_id)
@@ -252,15 +299,21 @@ class CallSession:
         match t:
             case "response.output_audio.delta":
                 pcm = base64.b64decode(ev.get("delta", ""))
-                self.turn.on_audio(len(pcm), now)
-                await self._audio_to_client(pcm)
+                if self.live is not None:
+                    self.turn.on_audio(len(pcm), now)
+                    self.live.push(pcm)  # queued until the avatar is in the room
+                elif self.avatar is not None:
+                    self.avatar.feed_audio(pcm)  # playback time is counted when the clip goes out
+                else:
+                    self.turn.on_audio(len(pcm), now)
+                    await self._audio_to_client(pcm)
             case "response.output_audio_transcript.delta":
-                await self._to_client({"type": "transcript.assistant.delta", "text": ev.get("delta", "")})
+                await self._assistant_text({"type": "transcript.assistant.delta", "text": ev.get("delta", "")})
             case "response.output_audio_transcript.done":
                 text = ev.get("transcript", "")
                 self._response_text += " " + text
                 self.record.transcript.append((self.role.id, text))
-                await self._to_client({"type": "transcript.assistant.done", "text": text})
+                await self._assistant_text({"type": "transcript.assistant.done", "text": text})
             case "conversation.item.input_audio_transcription.completed":
                 text = ev.get("transcript", "")
                 self.record.transcript.append(("user", text))
@@ -275,6 +328,10 @@ class CallSession:
                 resp = ev.get("response", {})
                 log.info("response.done status=%s output=%s", resp.get("status"),
                          [o.get("name") or o.get("type") for o in resp.get("output", [])])
+                if self.avatar is not None:
+                    self.avatar.flush()
+                if self.live is not None:
+                    self.live.end_reply()
                 await self._to_client({"type": "agent.speaking", "value": False})
                 ran_tools = await self._run_function_calls(resp)
                 if not ran_tools:
@@ -284,6 +341,10 @@ class CallSession:
                 if self._inflight is not None:  # user spoke before the notice started
                     self.queue.requeue_front(self._inflight)
                     self._inflight = None
+                if self.avatar is not None:
+                    await self.avatar.cancel()
+                if self.live is not None:
+                    self.live.interrupt()
                 await self._to_client({"type": "barge_in"})
             case "error":
                 err = ev.get("error") or {}
@@ -366,6 +427,8 @@ class CallSession:
             now = self.clock()
             if not self.queue or self._inflight or self._continuing or not self.turn.ready(now):
                 continue
+            if self.avatar is not None and self.avatar.busy:
+                continue  # the last reply hasn't reached the browser yet
             result = self.queue.pop()
             for event in injection_events(result, self.role, self.ctx.roles, self.mode):
                 await self._send_upstream(event)

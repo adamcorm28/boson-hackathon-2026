@@ -1,12 +1,13 @@
 """Process-wide gateway singletons. Routes read these at request time, so tests can swap them."""
 
+import asyncio
 import logging
 import os
 from pathlib import Path
 
 from company import get_company
 from company.types import CompanyAPI, CompanyUnavailable, Issue, TaskResult
-from gateway import company_compat, upstream
+from gateway import avatar, company_compat, upstream
 from gateway.events import EventBus
 from gateway.injector import NotificationQueue
 from gateway.memory import CallMemory
@@ -69,6 +70,9 @@ async def on_complete(result: TaskResult) -> None:
 
 async def startup() -> None:
     global watcher, simulator
+    if avatar.enabled():
+        kinds = ("idle",) if avatar.sync_mode() else avatar.LOOP_KINDS
+        asyncio.create_task(avatar.prepare_loops(list(roles), kinds))
     watcher = company_compat.make_watcher(company, on_update, on_complete)
     if watcher is not None:
         await watcher.start()

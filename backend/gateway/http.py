@@ -3,10 +3,10 @@
 from dataclasses import asdict
 
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 
 from company.types import CompanyUnavailable, TaskResult
-from gateway import app_state, company_compat
+from gateway import app_state, avatar, company_compat, live_avatar
 from gateway.call_session import CallSession
 from gateway.events import sse_stream
 from gateway.tools import CallContext
@@ -21,7 +21,60 @@ router = APIRouter()
 
 @router.get("/roles")
 async def get_roles():
-    return [r.public() for r in app_state.roles.values()]
+    return [r.public() | _avatar_urls(r.id) | {"avatar_live": live_avatar.avatar_id_for(r.id) is not None}
+            for r in app_state.roles.values()]
+
+
+def _avatar_urls(role_id: str) -> dict:
+    """The still face and the muted talking loop for a role with a reference image (gateway/avatar.py).
+    In sync mode there's no loop: replies arrive as lip-synced clips on the call socket."""
+    image = avatar.ref_image_path(role_id) if avatar.enabled() else None
+    if image is None:
+        return {"avatar_url": None, "avatar_loop_url": None, "avatar_idle_url": None}
+    base = app_state.PUBLIC_URL.rstrip("/")
+    version = f"?v={image.stat().st_mtime_ns}"  # a replaced image gets a new URL, so no stale cached face
+    loop = None if avatar.sync_mode() else f"{base}/avatar/loops/{role_id}{version}"
+    return {"avatar_url": f"{base}/avatar/images/{role_id}{version}", "avatar_loop_url": loop,
+            "avatar_idle_url": f"{base}/avatar/idle/{role_id}{version}"}
+
+
+@router.get("/avatar/images/{role_id}")
+async def get_avatar_image(role_id: str):
+    path = avatar.ref_image_path(role_id)
+    if path is None:
+        raise HTTPException(404, f"No avatar image for {role_id}")
+    return FileResponse(path)
+
+
+@router.get("/avatar/loops/{role_id}")
+async def get_avatar_loop(role_id: str):
+    try:
+        path = await avatar.talking_loop(role_id)
+    except Exception as e:
+        raise HTTPException(502, f"Couldn't render the talking loop: {e}")
+    if path is None:
+        raise HTTPException(404, f"No avatar image for {role_id}")
+    return FileResponse(path, media_type="video/mp4")
+
+
+@router.get("/avatar/idle/{role_id}")
+async def get_avatar_idle(role_id: str):
+    try:
+        path = await avatar.idle_loop(role_id)
+    except Exception as e:
+        raise HTTPException(502, f"Couldn't render the idle loop: {e}")
+    if path is None:
+        raise HTTPException(404, f"No avatar image for {role_id}")
+    return FileResponse(path, media_type="video/mp4")
+
+
+@router.get("/avatar/clips/{clip_id}")
+async def get_avatar_clip(clip_id: str):
+    clip = avatar.get_clip(clip_id)
+    if clip is None:
+        raise HTTPException(404, "Unknown or expired clip")
+    # Relayed while Boson is still rendering it (fragmented MP4), so playback starts early.
+    return StreamingResponse(clip.chunks(), media_type="video/mp4", headers={"Cache-Control": "no-store"})
 
 
 @router.get("/board")
@@ -80,9 +133,13 @@ async def call(ws: WebSocket, role_id: str):
         await ws.close(code=CLOSE_ALREADY_ON_CALL)
         return
     ctx = CallContext(role=role, company=app_state.company, roles=app_state.roles, on_task_started=None)
+    live_id = live_avatar.avatar_id_for(role.id)
     session = CallSession(
         role, ws, app_state.connect_upstream, ctx, app_state.queue, app_state.bus,
         app_state.memory, mode=app_state.injection_mode,
+        avatar_image=avatar.ref_image_path(role.id) if avatar.enabled() and avatar.sync_mode() and not live_id else None,
+        public_url=app_state.PUBLIC_URL,
+        live_avatar=live_avatar.LiveAvatar(live_id) if live_id else None,
     )
     app_state.active_call = session
     try:

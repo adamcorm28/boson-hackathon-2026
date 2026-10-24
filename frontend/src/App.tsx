@@ -134,7 +134,7 @@ function OfficeApp() {
 
       {titleOpen && <TitleCard mock={USE_MOCK} onStart={() => setTitleOpen(false)} />}
 
-      <CallWindow state={call.state} roles={roles} talking={call.talking} onHangup={call.hangup} onRetryMic={call.retryMic} />
+      <CallWindow state={call.state} roles={roles} talking={call.talking} media={call.media} muted={call.muted} onToggleMute={call.toggleMute} onHangup={call.hangup} onRetryMic={call.retryMic} />
     </main>
   );
 }

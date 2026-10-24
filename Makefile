@@ -10,7 +10,7 @@ PAPERCLIP_PY := paperclip/.venv/bin/python
 
 .DEFAULT_GOAL := help
 .PHONY: help setup test test-backend test-paperclip gateway paperclip-start paperclip-stop paperclip-status \
-        paperclip-logs paperclip-ui seed reset-repo reset-demo talk scenario
+        paperclip-logs paperclip-ui seed reset-repo reset-demo talk scenario avatar
 
 help: ## List the commands
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  \033[1m%-18s\033[0m %s\n", $$1, $$2}'
@@ -27,11 +27,14 @@ test-paperclip: ## Run the Paperclip-side tests (seed script, skills, AGENTS.md)
 	paperclip/.venv/bin/pytest -q paperclip/tests
 
 gateway: ## Run the voice gateway on PORT (default 8000) with reload
-	cd backend && .venv/bin/uvicorn main:app --reload --port $(PORT)
+	cd backend && .venv/bin/uvicorn main:app --reload --reload-dir gateway --reload-dir company --reload-dir roles --timeout-graceful-shutdown 2 --port $(PORT)
 
 ROLE ?= eng_lead
 talk: ## Call an agent with your mic (ROLE=ceo|cfo|eng_lead|engineer|sales_lead; needs requirements-dev.txt)
 	cd backend && .venv/bin/python dev/talk.py $(ROLE)
+
+avatar: ## Give an employee a lip-synced face: make avatar PHOTO=~/pic.jpg [FOR=engineer] (role from file name otherwise)
+	cd backend && .venv/bin/python dev/set_avatar.py "$(PHOTO)" $(if $(FOR),--role $(FOR))
 
 scenario: ## Automated demo-storyline check on the mock company (own gateway on :8001)
 	cd backend && .venv/bin/python dev/scenario.py

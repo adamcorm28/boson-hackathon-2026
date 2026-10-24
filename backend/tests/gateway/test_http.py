@@ -20,7 +20,7 @@ def client(monkeypatch, roles, company):
 def test_get_roles(client):
     body = client.get("/roles").json()
     assert {r["id"] for r in body} == {"ceo", "cfo", "eng_lead", "engineer", "sales_lead"}
-    assert set(body[0]) == {"id", "name", "title", "reports_to", "voice", "sprite", "desk"}
+    assert set(body[0]) == {"id", "name", "title", "reports_to", "voice", "sprite", "desk", "avatar_url", "avatar_loop_url", "avatar_idle_url", "avatar_live"}
 
 
 def test_board_has_all_columns(client, company):

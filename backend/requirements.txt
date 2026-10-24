@@ -8,3 +8,5 @@ pyyaml
 anthropic
 pytest
 pytest-asyncio
+livekit-agents==1.8.9
+livekit-api

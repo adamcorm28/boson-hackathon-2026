@@ -109,13 +109,13 @@ def harness(roles, company, tmp_path):
     h.clock = Clock()
     h.company = company
 
-    def make(role_id="eng_lead", mode="user_message"):
+    def make(role_id="eng_lead", mode="user_message", live_avatar=None):
         async def connect():
             return h.upstream
 
         ctx = CallContext(role=roles[role_id], company=company, roles=roles, on_task_started=None)
         h.session = CallSession(roles[role_id], h.client, connect, ctx, h.queue, h.bus, h.memory,
-                                mode=mode, clock=h.clock, tick=0.005)
+                                mode=mode, clock=h.clock, tick=0.005, live_avatar=live_avatar)
         h.task = asyncio.create_task(h.session.run())
         return h.session
 
@@ -503,5 +503,68 @@ async def test_no_lookup_nudge_when_tool_was_called(harness):
     await until(lambda: "tool.called" in harness.client.types())
     await asyncio.sleep(0.05)
     assert lookup_nudges(harness) == 0
+    harness.client.disconnect()
+    await harness.task
+
+
+class FakeLiveAvatar:
+    def __init__(self, fail=False):
+        self.fail = fail
+        self.pushed: list = []
+        self.closed = False
+
+    async def start(self):
+        if self.fail:
+            raise RuntimeError("no capacity")
+        return {"url": "wss://x.livekit.cloud", "token": "viewer-jwt", "avatar_identity": "boson-avatar"}
+
+    def push(self, pcm):
+        self.pushed.append(pcm)
+
+    def end_reply(self):
+        self.pushed.append("flush")
+
+    def interrupt(self):
+        self.pushed.append("interrupt")
+
+    def drain(self):
+        out, self.pushed = [p for p in self.pushed if isinstance(p, bytes)], []
+        return out
+
+    async def close(self):
+        self.closed = True
+
+
+async def test_live_avatar_gets_the_speech_and_the_browser_gets_the_room(harness):
+    live = FakeLiveAvatar()
+    harness.make(live_avatar=live)
+    await started(harness)
+    await until(lambda: "avatar.room" in harness.client.types())
+    room = next(e for e in harness.client.json if e["type"] == "avatar.room")
+    assert room["token"] == "viewer-jwt"
+    harness.upstream.feed(
+        {"type": "response.created"},
+        {"type": "response.output_audio.delta", "delta": base64.b64encode(b"\x01\x02").decode()},
+        {"type": "response.done", "response": {"output": []}},
+        {"type": "input_audio_buffer.speech_started"},
+    )
+    await until(lambda: "interrupt" in live.pushed)
+    assert live.pushed == [b"\x01\x02", "flush", "interrupt"]
+    assert harness.client.binary == []
+    harness.client.disconnect()
+    await harness.task
+    assert live.closed
+
+
+async def test_live_avatar_failure_falls_back_to_plain_audio(harness):
+    live = FakeLiveAvatar(fail=True)
+    live.pushed.append(b"\x05\x06")  # greeting audio queued while it was starting
+    harness.make(live_avatar=live)
+    await until(lambda: harness.client.binary == [b"\x05\x06"])
+    assert harness.session.live is None and live.closed
+    harness.upstream.feed({"type": "response.output_audio.delta", "delta": base64.b64encode(b"\x07\x08").decode()})
+    await until(lambda: harness.client.binary == [b"\x05\x06", b"\x07\x08"])
+    assert "avatar.room" not in harness.client.types()
+    assert {"type": "avatar.unavailable", "reason": "error"} in harness.client.json
     harness.client.disconnect()
     await harness.task

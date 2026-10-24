@@ -9,6 +9,8 @@ const DISMISS_ERROR_MS = 3000;
 export function useCall(gateway: Gateway, opts: { onEvent?: (e: CallEvent) => void } = {}) {
   const [state, dispatch] = useReducer(callReducer, initialCallState);
   const [playing, setPlaying] = useState(false);
+  const [media, setMedia] = useState<HTMLElement | null>(null);
+  const [muted, setMuted] = useState(false);
   const ctrl = useRef<CallController | null>(null);
   const onEvent = useRef(opts.onEvent);
   onEvent.current = opts.onEvent;
@@ -21,12 +23,17 @@ export function useCall(gateway: Gateway, opts: { onEvent?: (e: CallEvent) => vo
         gateway,
         roleId,
         (a) => {
-          if (a.type === "closed" && ctrl.current === me) ctrl.current = null;
+          if (a.type === "closed" && ctrl.current === me) {
+            ctrl.current = null;
+            setMedia(null);
+          }
           dispatch(a);
         },
         { onEvent: (e) => onEvent.current?.(e) },
       );
       ctrl.current = me;
+      setMedia(me.media);
+      setMuted(false);
     },
     [gateway],
   );
@@ -37,6 +44,12 @@ export function useCall(gateway: Gateway, opts: { onEvent?: (e: CallEvent) => vo
   }, []);
 
   const retryMic = useCallback(() => ctrl.current?.retryMic(), []);
+  const toggleMute = useCallback(() => {
+    setMuted((m) => {
+      ctrl.current?.setMuted(!m);
+      return !m;
+    });
+  }, []);
   const sendAudio = useCallback((pcm: ArrayBuffer) => ctrl.current?.sendAudio(pcm), []);
 
   // Close the window by itself once the call is over (also when the server ended it).
@@ -58,5 +71,5 @@ export function useCall(gateway: Gateway, opts: { onEvent?: (e: CallEvent) => vo
 
   useEffect(() => () => ctrl.current?.hangup(), []);
 
-  return { state, dial, hangup, retryMic, sendAudio, talking: state.speaking || playing };
+  return { state, dial, hangup, retryMic, sendAudio, media, muted, toggleMute, talking: state.speaking || playing };
 }

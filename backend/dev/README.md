@@ -27,5 +27,13 @@ It plays the user with TTS speech. Ryan delegates to Dwight, then Jim announces 
 STAY=40 .venv/bin/python dev/call_client.py sales_lead "Hey Jim, how's the pipeline?"
 ```
 
+## Lip-synced faces from photos
+```bash
+.venv/bin/python dev/set_avatar.py ~/Downloads/dwight.jpg                  # role from the file name
+.venv/bin/python dev/set_avatar.py ~/Downloads/friend.png --role engineer   # or say which employee
+make avatar PHOTO=~/Downloads/friend.png FOR=engineer                       # same, from the repo root
+```
+It copies the photo to `data/avatars/<role>.<ext>` (an earlier one moves to `data/avatars/old/`), takes that role off the Boson live avatar in `data/live_avatars.yaml`, and renders the idle loop (~10 s). Then refresh the browser tab; the gateway needs no restart. Use your own photo, a teammate who agreed, or drawn art, never an actor's photo.
+
 ## Cloned voices on this machine
 Put `role_id: voice_<id>` lines in `backend/data/voice_overrides.yaml`. It's gitignored, overrides the voice in `backend/roles/*.yaml`, and is read when the gateway starts. Clones belong to one Boson account, so they stay out of the shared role files.

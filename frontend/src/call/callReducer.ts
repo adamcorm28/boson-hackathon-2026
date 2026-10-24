@@ -28,6 +28,8 @@ export interface CallState {
   /** Mic problem; the call stays up so you can still hear them. */
   micError: string | null;
   endReason: string | null;
+  /** Why the live avatar video isn't showing, if it failed to start. */
+  videoNotice: string | null;
 }
 
 export type CallAction =
@@ -47,6 +49,7 @@ export const initialCallState: CallState = {
   error: null,
   micError: null,
   endReason: null,
+  videoNotice: null,
 };
 
 const openAgentLine = (lines: CallLine[]) => lines.findLastIndex((l) => l.speaker === "agent" && !l.final);
@@ -126,6 +129,12 @@ export function callReducer(state: CallState, action: CallAction): CallState {
 
     case "mic_ok":
       return state.micError === null ? state : { ...state, micError: null };
+
+    case "avatar.unavailable":
+      return {
+        ...state,
+        videoNotice: action.reason === "busy" ? "Video unavailable: Boson's avatars are all busy" : "Video unavailable",
+      };
 
     default:
       return state; // tool.called and anything unknown

@@ -199,6 +199,7 @@ export function DevPanel() {
         state={call.state}
         roles={roles}
         talking={call.talking}
+        media={call.media}
         onHangup={call.hangup}
         onRetryMic={call.retryMic}
       />
