@@ -38,6 +38,7 @@ class FakePaperclip:
             {"authorType": "agent", "authorAgentId": "ag-dwight", "body": "x" * 400, "createdAt": "t2"},
         ]}
         self.posted: list[tuple[str, dict]] = []
+        self.runs: dict[str, list[dict]] = {}
 
     def find(self, key):
         return next((i for i in self.issues if key in (i["id"], i["identifier"])), None)
@@ -55,6 +56,9 @@ class FakePaperclip:
             new["description"] = body["description"]
             self.issues.append(new)
             return httpx.Response(201, json=new)
+        if m := re.fullmatch(r"/api/issues/([^/]+)/runs", path):
+            found = self.find(m.group(1))
+            return httpx.Response(200, json=self.runs.get(found["id"], [])) if found else httpx.Response(404, json={})
         if m := re.fullmatch(r"/api/issues/([^/]+)(/comments)?", path):
             found = self.find(m.group(1))
             if found is None:
@@ -146,7 +150,7 @@ async def test_get_costs_reports_billed_cents_and_tokens(pc):
 
 
 async def test_get_costs_includes_api_list_price_estimate(pc, monkeypatch):
-    monkeypatch.delenv("PAPERCLIP_PRICING_MODEL", raising=False)
+    monkeypatch.setenv("PAPERCLIP_PRICING_MODEL", "claude-opus-5-5")
     est = (await pc.get_costs())["estimate"]
     # Claude Opus 5.5 list prices: $4/M input, $0.20/M cached input, $20/M output
     assert est["model"] == "claude-opus-5-5"
@@ -159,7 +163,16 @@ async def test_get_costs_estimate_with_other_pricing_model(pc, monkeypatch):
     monkeypatch.setenv("PAPERCLIP_PRICING_MODEL", "claude-sonnet-5-5")
     est = (await pc.get_costs())["estimate"]
     assert est["model"] == "claude-sonnet-5-5"
-    assert est["total_usd"] == 0.007  # 1500*$2/M + 5000*$0.20/M + 300*$10/M
+    assert est["total_usd"] == 0.0065  # 1500*$2/M + 5000*$0.10/M + 300*$10/M (live pricing page)
+
+
+async def test_get_costs_default_estimate_is_opus_5(pc, monkeypatch):
+    # The agents run claude-opus-5 (Paperclip's bundled Claude Code can't run Opus 5.5).
+    monkeypatch.delenv("PAPERCLIP_PRICING_MODEL", raising=False)
+    est = (await pc.get_costs())["estimate"]
+    assert est["model"] == "claude-opus-5"
+    assert est["by_role_usd"] == {"engineer": 0.0125, "sales_lead": 0.005}  # $5/M in, $0.50/M cached, $25/M out
+    assert est["total_usd"] == 0.0175
 
 
 async def test_get_costs_unknown_pricing_model_skips_estimate(pc, monkeypatch):
@@ -249,3 +262,30 @@ def test_get_company_selects_paperclip(tmp_path, monkeypatch):
     monkeypatch.setattr("company.paperclip.DEFAULT_IDS_PATH", tmp_path / "ids.json")
     (tmp_path / "ids.json").write_text(json.dumps(IDS))
     assert isinstance(company.get_company(), PaperclipCompany)
+
+
+def run(status, error_code=None, retry_at=None, started="2026-10-24T05:00:00Z"):
+    return {"runId": f"run-{status}", "status": status, "errorCode": error_code, "error": None,
+            "scheduledRetryAt": retry_at, "startedAt": started}
+
+
+async def test_get_issue_reports_failed_latest_run(pc, fake):
+    fake.runs["is-11"] = [run("failed", "acpx_turn_failed", started="2026-10-24T05:10:00Z"),
+                          run("succeeded", started="2026-10-24T05:00:00Z")]
+    assert (await pc.get_issue("DUNA-11")).failed_reason == "acpx_turn_failed"
+
+
+async def test_failed_run_with_pending_retry_is_not_failed(pc, fake):
+    fake.runs["is-11"] = [run("failed", "acpx_turn_failed", retry_at="2026-10-24T05:15:00Z")]
+    assert (await pc.get_issue("DUNA-11")).failed_reason is None
+
+
+async def test_later_successful_run_clears_failure(pc, fake):
+    fake.runs["is-11"] = [run("failed", "acpx_turn_failed", started="2026-10-24T05:00:00Z"),
+                          run("running", started="2026-10-24T05:10:00Z")]
+    assert (await pc.get_issue("DUNA-11")).failed_reason is None
+
+
+async def test_seed_issue_runs_not_checked(pc, fake):
+    fake.runs["is-1"] = [run("failed", "acpx_turn_failed")]
+    assert (await pc.get_issue("DM-101")).failed_reason is None

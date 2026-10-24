@@ -15,7 +15,7 @@ SEED_PATH = Path(__file__).parent / "data" / "issues_seed.json"
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(timezone.utc).isoformat(timespec="microseconds")
 
 
 class MockCompany:
@@ -85,6 +85,13 @@ class MockCompany:
         lines = [f"RESULT: {summary}"] + [f"ARTIFACT: {a.kind} {a.url} {a.label}" for a in artifacts]
         self._comment(task_id, self._issues[task_id].assignee_role, "\n".join(lines))
         self.set_status(task_id, "done")
+
+    def fail(self, task_id: str, reason: str, touch: bool = True) -> None:
+        """Simulate the assignee's run failing. Paperclip doesn't touch the issue then (touch=False)."""
+        issue = self._issues[task_id]
+        issue.failed_reason = reason
+        if touch:
+            issue.updated_at = _now()
 
     def _comment(self, task_id: str, author_role: str | None, body: str) -> None:
         issue = self._issues[task_id]

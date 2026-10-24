@@ -10,7 +10,7 @@ PAPERCLIP_PY := paperclip/.venv/bin/python
 
 .DEFAULT_GOAL := help
 .PHONY: help setup test test-backend test-paperclip gateway paperclip-start paperclip-stop paperclip-status \
-        paperclip-logs paperclip-ui seed reset-repo talk scenario
+        paperclip-logs paperclip-ui seed reset-repo reset-demo talk scenario
 
 help: ## List the commands
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  \033[1m%-18s\033[0m %s\n", $$1, $$2}'
@@ -54,6 +54,9 @@ paperclip-ui: ## Print the Paperclip UI address
 
 seed: ## Create or refresh Dunder Mifflin in Paperclip (idempotent)
 	DEMO_REPO="$(DEMO_REPO)" PAPERCLIP_URL="$(PAPERCLIP_URL)" $(PAPERCLIP_PY) paperclip/seed.py
+
+reset-demo: ## Full reset between takes: Paperclip tasks/runs/sessions, demo repo, GitHub PRs, artifacts, re-seed
+	paperclip/reset_demo.sh
 
 reset-repo: ## Put the demo repo back at the seeded bug (discards local changes there)
 	git -C "$(DEMO_REPO)" checkout -q main

@@ -50,7 +50,11 @@ export function officeReducer(state: OfficeState, action: OfficeAction): OfficeS
       return {
         ...state,
         bang: { ...state.bang, [action.from_role]: [...ids, action.task_id] },
-        toasts: [...state.toasts, { id: action.task_id, text: `${name}: ${action.title} is done!`, task_id: action.task_id }],
+        toasts: [...state.toasts, {
+          id: action.task_id,
+          text: action.failed ? `${name}: ${action.title} couldn't finish` : `${name}: ${action.title} is done!`,
+          task_id: action.task_id,
+        }],
       };
     }
 

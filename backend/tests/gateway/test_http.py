@@ -128,3 +128,11 @@ def test_dev_complete_announces(state, company):
     assert TestClient(app).get("/tasks/DM-101").json()["result_summary"] == "Patched pricing.js."
     assert [r.task_id for r in state.queue.pending()] == ["DM-101"]
     assert sub._queue.qsize() == 2  # task.completed + ping
+
+
+async def test_failed_completion_is_flagged_and_pings_couldnt_finish(state):
+    sub = state.bus.subscribe()
+    await state.on_complete(TaskResult("DM-201", "Lackawanna model", "cfo", "ceo", "It couldn't finish.", [], failed=True))
+    events = dict(await drain(sub))
+    assert events["task.completed"]["failed"] is True
+    assert "couldn't finish" in events["ping"]["text"] and "is done" not in events["ping"]["text"]
