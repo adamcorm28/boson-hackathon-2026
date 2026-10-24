@@ -102,3 +102,40 @@ async def test_company_unavailable_returns_error(roles):
 async def test_ai_spend(roles, company, name):
     out = await run_tool(name, {}, make_ctx(roles, company, "cfo"))
     assert out["total_cents"] == 412
+
+
+async def test_research_creates_research_task_for_self(roles, company):
+    started = []
+
+    async def on_started(*a):
+        started.append(a)
+
+    role = roles["cfo"]
+    role.voice_tools = [*role.voice_tools, "research"]
+    ctx = CallContext(role=role, company=company, roles=roles, on_task_started=on_started)
+    out = await run_tool("research", {"question": "What are competitors' financials?", "topic": "competitor financials"}, ctx)
+    assert out["status"] == "started"
+    issue = await company.get_issue(out["task_id"])
+    assert issue.kind == "research" and issue.assignee_role == "cfo" and issue.requested_by_role == "cfo"
+    assert issue.title == "Research: competitor financials"
+    assert "competitors' financials" in issue.description
+    assert started == [(out["task_id"], "Research: competitor financials", "cfo")]
+
+
+async def test_research_needs_a_question(roles, company):
+    role = roles["cfo"]
+    role.voice_tools = [*role.voice_tools, "research"]
+    ctx = CallContext(role=role, company=company, roles=roles, on_task_started=lambda *a: None)
+    assert "error" in await run_tool("research", {"question": ""}, ctx)
+
+
+async def test_get_issue_includes_finished_result(roles, company):
+    async def noop(*a):
+        pass
+
+    tid = await company.create_task("cfo", "Research: finance tools", "q", "cfo", kind="research")
+    company.complete(tid, "Three tools stand out.")
+    ctx = CallContext(role=roles["cfo"], company=company, roles=roles, on_task_started=noop)
+    roles["cfo"].voice_tools = [*roles["cfo"].voice_tools, "get_issue"]
+    out = await run_tool("get_issue", {"task_id": tid}, ctx)
+    assert out["result"] == "Three tools stand out."

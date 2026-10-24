@@ -289,3 +289,18 @@ async def test_later_successful_run_clears_failure(pc, fake):
 async def test_seed_issue_runs_not_checked(pc, fake):
     fake.runs["is-1"] = [run("failed", "acpx_turn_failed")]
     assert (await pc.get_issue("DM-101")).failed_reason is None
+
+
+async def test_research_task_runs_on_opus_5_5_via_cli(pc, fake, monkeypatch):
+    monkeypatch.delenv("RESEARCH_MODEL", raising=False)
+    task_id = await pc.create_task("cfo", "Research: finance tools", "What's new?", "cfo", kind="research")
+    _, body = fake.posted[-1]
+    assert body["description"].endswith("---\norigin: voice\nrequested_by: cfo\nkind: research")
+    assert body["assigneeAdapterOverrides"] == {"adapterConfig": {"engine": "cli", "model": "claude-opus-5-5"}}
+    assert (await pc.get_issue(task_id)).kind == "research"
+
+
+async def test_normal_task_has_no_override(pc, fake):
+    await pc.create_task("engineer", "Fix", "brief", "eng_lead")
+    _, body = fake.posted[-1]
+    assert "assigneeAdapterOverrides" not in body

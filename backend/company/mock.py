@@ -40,7 +40,8 @@ class MockCompany:
     async def get_issue(self, task_id: str) -> Issue:
         return copy.deepcopy(self._issues[task_id])
 
-    async def create_task(self, assignee_role: str, title: str, brief: str, requested_by_role: str) -> str:
+    async def create_task(self, assignee_role: str, title: str, brief: str, requested_by_role: str,
+                          kind: str = "task") -> str:
         task_id = f"DM-{self._next_id}"
         self._next_id += 1
         self._issues[task_id] = Issue(
@@ -53,6 +54,7 @@ class MockCompany:
             flagged=False,
             description=brief,
             updated_at=_now(),
+            kind=kind,
         )
         return task_id
 

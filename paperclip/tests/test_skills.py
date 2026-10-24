@@ -133,6 +133,11 @@ def test_agents_md_result_summary_is_short_and_spoken(agents_md):
         assert "no task IDs" in text, role
 
 
+def test_agents_md_have_research_section(agents_md):
+    for role, text in agents_md.items():
+        assert "## Research tasks" in text and "sources" in text, role
+
+
 def test_agents_md_competent_team_rule(agents_md):
     for role, text in agents_md.items():
         assert "flavor, not friction" in text, role

@@ -14,7 +14,7 @@ ROLE_IDS = ("ceo", "cfo", "eng_lead", "engineer", "sales_lead")
 VOICE_TOOL_NAMES = frozenset({
     "get_company_overview", "read_inbox", "read_email", "get_board", "get_issue",
     "get_my_work", "delegate_task", "get_financials", "get_ai_spend",
-    "get_pipeline", "get_deal", "lookup_company", "web_search",
+    "get_pipeline", "get_deal", "lookup_company", "web_search", "research",
 })
 
 
@@ -45,6 +45,7 @@ class Issue:
     comments: list[Comment] = field(default_factory=list)
     updated_at: str = ""
     failed_reason: str | None = None  # set when the assignee's latest run failed with no retry pending
+    kind: Literal["task", "research"] = "task"  # research: long-running research on a stronger model
 
 
 @dataclass
@@ -77,7 +78,8 @@ class CompanyAPI(Protocol):
         """Raises KeyError if the task id is unknown."""
         ...
 
-    async def create_task(self, assignee_role: str, title: str, brief: str, requested_by_role: str) -> str: ...
+    async def create_task(self, assignee_role: str, title: str, brief: str, requested_by_role: str,
+                          kind: Literal["task", "research"] = "task") -> str: ...
 
     async def add_comment(self, task_id: str, body: str) -> None: ...
 

@@ -49,6 +49,7 @@ cp .env.example .env            # then set BOSON_API_KEY (and ANTHROPIC_API_KEY,
   - The voice body is a Realtime session: fast, with ≤ 6 tools, all names from `VOICE_TOOL_NAMES`.
   - The work body is a Paperclip `claude_local` agent: slow and deep.
   - The voice body's `delegate_task` creates a Paperclip issue. The work body finishes with a comment `RESULT: <summary>` plus `ARTIFACT: <kind> <url> <label>` lines. A task counts as complete only when its status is `in_review`/`done` **and** a `RESULT:` comment exists.
+- **Research:** every employee has a `research(question, topic)` voice tool for outside-world or in-depth questions. It creates a `kind: research` task for themselves that runs on **Claude Opus 5.5** through a per-task adapter override (`engine: cli`, `RESEARCH_MODEL`), because Paperclip's bundled Claude Code can't run 5.5. The result is pinged like any task. The full brief (`artifacts/research-*.md`) comes back through `get_issue` and the briefing's "Research you finished recently" section.
 - **Engineer demo repo:** `../dunder-mifflin-infinity/`, a separate git repo with a seeded bulk-discount bug. Reset it with `git reset --hard seeded-bug`.
 
 ## Higgs Realtime gotchas (from Boson docs)
