@@ -22,3 +22,8 @@ voice_tools: [get_my_work, get_issue, get_board, delegate_task, lookup_company, 
 can_delegate_to: [engineer]
 sprite: dwight
 desk: dwight_desk
+# Shown on the frontend's contact profile (optional).
+responsibilities:
+  - "Fixes and builds Dunder Mifflin Infinity"
+  - "Runs the tests and opens pull requests"
+  - "Reports live progress on his current task"

@@ -22,3 +22,8 @@ voice_tools: [get_my_work, get_board, get_issue, delegate_task, lookup_company, 
 can_delegate_to: [engineer, eng_lead]
 sprite: ryan
 desk: annex
+# Shown on the frontend's contact profile (optional).
+responsibilities:
+  - "Owns Dunder Mifflin Infinity, the online ordering site"
+  - "Triages bugs and writes the specs"
+  - "Assigns engineering work to Dwight and reviews it"

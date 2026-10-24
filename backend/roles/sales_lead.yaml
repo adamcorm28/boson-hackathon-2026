@@ -22,3 +22,8 @@ voice_tools: [get_pipeline, get_deal, get_my_work, delegate_task, web_search, lo
 can_delegate_to: [sales_lead]
 sprite: jim
 desk: jim_desk
+# Shown on the frontend's contact profile (optional).
+responsibilities:
+  - "The sales pipeline and client deals, like Lackawanna County"
+  - "Researches new leads in the Scranton area"
+  - "Builds pitch decks for prospects"

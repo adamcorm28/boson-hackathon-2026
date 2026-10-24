@@ -25,6 +25,19 @@ async def get_roles():
             for r in app_state.roles.values()]
 
 
+@router.get("/roles/{role_id}/status")
+async def get_role_status(role_id: str):
+    """What someone is doing right now, for the frontend's contact profile: idle or working, the
+    current task, and the latest note on it (the company layer's get_agent_status)."""
+    if role_id not in app_state.roles:
+        raise HTTPException(404, f"Unknown role {role_id}")
+    try:
+        status = await app_state.company.get_agent_status(role_id)
+    except CompanyUnavailable:
+        raise HTTPException(503, "Company backend unavailable")
+    return asdict(status)
+
+
 def _avatar_urls(role_id: str) -> dict:
     """The still face and the muted talking loop for a role with a reference image (gateway/avatar.py).
     In sync mode there's no loop: replies arrive as lip-synced clips on the call socket."""

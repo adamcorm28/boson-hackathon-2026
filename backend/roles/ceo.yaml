@@ -22,3 +22,9 @@ voice_tools: [get_company_overview, read_inbox, read_email, get_board, delegate_
 can_delegate_to: [ceo, cfo, eng_lead, engineer, sales_lead]
 sprite: michael
 desk: michael_office
+# Shown on the frontend's contact profile (optional).
+responsibilities:
+  - "Runs the Scranton branch and its Q4 targets"
+  - "Keeps an eye on sales, margin and KPIs across every team"
+  - "Handles the inbox, including updates for corporate"
+  - "Hands work to anyone on the team"

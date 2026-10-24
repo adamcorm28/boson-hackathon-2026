@@ -100,5 +100,7 @@ This is exactly spec §7a, with these additions:
 - The frontend marks "!" on `from_role` after `task.completed`, and clears it when that task's result is opened or that role is called.
 - A second `WS /call/*` while one call is active is closed with code `4409`.
 - Artifacts are served at `GET /artifacts/<filename>`.
+- `GET /roles` also returns `responsibilities: string[]` (optional `responsibilities:` list in `backend/roles/<role>.yaml`; `[]` when absent), shown on the classic-mode contact profile.
+- `GET /roles/{role_id}/status` returns the company layer's `get_agent_status`: `{role, state: "idle"|"working", current_task_id, last_comment}`. 404 for an unknown role, 503 when the company backend is down.
 
 TypeScript mirror: `frontend/src/api/types.ts` (created in C1).

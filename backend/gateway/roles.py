@@ -1,7 +1,7 @@
 """Role configs: one YAML per employee in backend/roles/ (spec §6.1)."""
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
@@ -35,6 +35,8 @@ class Role:
     turn_detection: dict | None = None
     sprite: str | None = None
     desk: str | None = None
+    # Optional, for the frontend's contact profiles: what this person is responsible for.
+    responsibilities: list[str] = field(default_factory=list)
 
     def public(self) -> dict:
         """The GET /roles shape (spec §7a)."""
@@ -46,6 +48,7 @@ class Role:
             "voice": self.voice,
             "sprite": self.sprite,
             "desk": self.desk,
+            "responsibilities": list(self.responsibilities),
         }
 
 
@@ -70,6 +73,9 @@ def load_roles(roles_dir: Path | None = None, voice_overrides: dict[str, str] | 
         missing = [k for k in REQUIRED_KEYS if k not in raw]
         if missing:
             raise ValueError(f"{path.name}: missing required keys {missing}")
+        responsibilities = raw.get("responsibilities") or []
+        if not isinstance(responsibilities, list) or not all(isinstance(r, str) for r in responsibilities):
+            raise ValueError(f"{path.name}: responsibilities must be a list of strings")
         unknown = [t for t in raw["voice_tools"] if t not in VOICE_TOOL_NAMES]
         if unknown:
             raise ValueError(f"{path.name}: unknown voice tools {unknown}")
@@ -87,6 +93,7 @@ def load_roles(roles_dir: Path | None = None, voice_overrides: dict[str, str] | 
             turn_detection=raw.get("turn_detection"),
             sprite=raw.get("sprite"),
             desk=raw.get("desk"),
+            responsibilities=list(responsibilities),
         )
         roles[role.id] = role
     return roles

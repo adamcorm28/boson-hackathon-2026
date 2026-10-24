@@ -61,8 +61,25 @@ def test_unknown_tool_raises(tmp_path):
 def test_public_shape(tmp_path):
     write(tmp_path, "eng_lead", VALID)
     pub = load_roles(tmp_path)["eng_lead"].public()
-    assert set(pub) == {"id", "name", "title", "reports_to", "voice", "sprite", "desk"}
+    assert set(pub) == {"id", "name", "title", "reports_to", "voice", "sprite", "desk", "responsibilities"}
     assert pub["id"] == "eng_lead"
+    assert pub["responsibilities"] == []  # optional key, absent in VALID
+
+
+def test_responsibilities_load_as_a_list_of_strings(tmp_path):
+    write(tmp_path, "eng_lead", VALID + "responsibilities:\n  - Owns Infinity\n  - Triages bugs\n")
+    assert load_roles(tmp_path)["eng_lead"].responsibilities == ["Owns Infinity", "Triages bugs"]
+
+
+def test_responsibilities_must_be_a_list(tmp_path):
+    write(tmp_path, "eng_lead", VALID + "responsibilities: Owns Infinity\n")
+    with pytest.raises(ValueError, match="responsibilities"):
+        load_roles(tmp_path)
+
+
+def test_every_real_role_lists_responsibilities():
+    for role in load_roles(DEFAULT_ROLES_DIR, voice_overrides={}).values():
+        assert role.responsibilities and all(isinstance(r, str) and r for r in role.responsibilities), role.id
 
 
 def test_real_roles_load_and_cover_all_role_ids():

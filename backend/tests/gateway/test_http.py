@@ -2,7 +2,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from company.types import Artifact, TaskResult
+from company.types import Artifact, CompanyUnavailable, TaskResult
 from gateway import app_state, http
 from gateway.events import EventBus
 
@@ -20,7 +20,33 @@ def client(monkeypatch, roles, company):
 def test_get_roles(client):
     body = client.get("/roles").json()
     assert {r["id"] for r in body} == {"ceo", "cfo", "eng_lead", "engineer", "sales_lead"}
-    assert set(body[0]) == {"id", "name", "title", "reports_to", "voice", "sprite", "desk", "avatar_url", "avatar_loop_url", "avatar_idle_url", "avatar_live"}
+    assert set(body[0]) == {"id", "name", "title", "reports_to", "voice", "sprite", "desk", "responsibilities",
+                            "avatar_url", "avatar_loop_url", "avatar_idle_url", "avatar_live"}
+    assert all(r["responsibilities"] for r in body)
+
+
+def test_role_status_idle(client):
+    assert client.get("/roles/ceo/status").json() == {
+        "role": "ceo", "state": "idle", "current_task_id": None, "last_comment": None,
+    }
+
+
+def test_role_status_working_includes_latest_note(client, company):
+    company.set_status("DM-101", "in_progress")  # Ryan's flagged bug, which has his comment on it
+    body = client.get("/roles/eng_lead/status").json()
+    assert body["state"] == "working" and body["current_task_id"] == "DM-101"
+    assert body["last_comment"]
+
+
+def test_role_status_unknown_role_404(client):
+    assert client.get("/roles/nobody/status").status_code == 404
+
+
+def test_role_status_company_down_503(client, company, monkeypatch):
+    async def down(role):
+        raise CompanyUnavailable("down")
+    monkeypatch.setattr(company, "get_agent_status", down)
+    assert client.get("/roles/ceo/status").status_code == 503
 
 
 def test_board_has_all_columns(client, company):

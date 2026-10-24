@@ -21,3 +21,8 @@ voice_tools: [get_financials, get_ai_spend, get_board, delegate_task, lookup_com
 can_delegate_to: [cfo]
 sprite: kevin
 desk: accounting
+# Shown on the frontend's contact profile (optional).
+responsibilities:
+  - "Branch finances: monthly P&L, margin and forecasts"
+  - "Tracks what the AI staff costs to run"
+  - "Builds Excel models, like what a deal is worth"
