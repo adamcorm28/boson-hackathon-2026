@@ -19,10 +19,14 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 # Load backend/.env regardless of the directory uvicorn is started from.
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
+
+# Imported after load_dotenv: the gateway reads COMPANY_BACKEND / ROLES_DIR at import.
+from gateway import http as gateway_http  # noqa: E402
 
 BOSON_API_KEY = os.environ["BOSON_API_KEY"]
 
@@ -48,6 +52,14 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["X-Video-Id"],
 )
+
+# Voice gateway: /roles /board /tasks /events /call/{role_id}, plus agent artifacts.
+app.include_router(gateway_http.router)
+ARTIFACTS_DIR = os.getenv(
+    "ARTIFACTS_DIR", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "artifacts")
+)
+os.makedirs(ARTIFACTS_DIR, exist_ok=True)
+app.mount("/artifacts", StaticFiles(directory=ARTIFACTS_DIR), name="artifacts")
 
 client = httpx.AsyncClient(headers=AUTH_HEADERS, timeout=120)
 
