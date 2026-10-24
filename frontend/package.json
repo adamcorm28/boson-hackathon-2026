@@ -9,7 +9,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "check:gateway": "NODE_OPTIONS=--experimental-eventsource vite-node scripts/check-gateway.ts"
   },
   "dependencies": {
     "react": "^18.3.1",

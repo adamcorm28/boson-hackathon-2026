@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { CallEvent } from "../api/types";
-import { ALREADY_ON_CALL_TEXT, callReducer, initialCallState, MIC_BLOCKED_TEXT, type CallAction, type CallState } from "./callReducer";
+import {
+  ALREADY_ON_CALL_TEXT,
+  callReducer,
+  initialCallState,
+  MIC_BLOCKED_TEXT,
+  UNKNOWN_ROLE_TEXT,
+  type CallAction,
+  type CallState,
+} from "./callReducer";
 
 const run = (...actions: CallAction[]): CallState => actions.reduce(callReducer, initialCallState);
 const live = (...actions: CallAction[]) =>
@@ -72,6 +80,11 @@ describe("callReducer", () => {
   it("4409 sets already-on-call error", () => {
     const s = run({ type: "dial", roleId: "ceo" }, { type: "closed", code: 4409 });
     expect(s).toMatchObject({ status: "ended", error: ALREADY_ON_CALL_TEXT });
+  });
+
+  it("4404 says the employee is unknown", () => {
+    const s = run({ type: "dial", roleId: "pam" }, { type: "closed", code: 4404 });
+    expect(s).toMatchObject({ status: "ended", error: UNKNOWN_ROLE_TEXT });
   });
 
   it("a normal close just ends; an abnormal one says the connection was lost", () => {

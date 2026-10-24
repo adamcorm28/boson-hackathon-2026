@@ -110,6 +110,8 @@ export type CallEvent =
 
 /** Close code the gateway uses when a second call is opened while one is active. */
 export const CLOSE_ALREADY_ON_CALL = 4409;
+/** Close code for a role id the gateway doesn't know. */
+export const CLOSE_UNKNOWN_ROLE = 4404;
 
 // ---- Client interfaces (implemented by api/gateway.ts and api/mock.ts) ----
 

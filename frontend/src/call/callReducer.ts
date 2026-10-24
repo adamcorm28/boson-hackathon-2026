@@ -1,7 +1,8 @@
 // Call window state. Pure: actions are the gateway's CallEvents plus a few local ones.
-import { CLOSE_ALREADY_ON_CALL, type CallEvent } from "../api/types";
+import { CLOSE_ALREADY_ON_CALL, CLOSE_UNKNOWN_ROLE, type CallEvent } from "../api/types";
 
 export const ALREADY_ON_CALL_TEXT = "Already on a call";
+export const UNKNOWN_ROLE_TEXT = "Nobody by that name works here";
 export const MIC_BLOCKED_TEXT = "Mic blocked — allow microphone and retry";
 
 export interface CallLine {
@@ -115,6 +116,7 @@ export function callReducer(state: CallState, action: CallAction): CallState {
     case "closed": {
       let error = state.error;
       if (action.code === CLOSE_ALREADY_ON_CALL) error = ALREADY_ON_CALL_TEXT;
+      else if (action.code === CLOSE_UNKNOWN_ROLE) error = UNKNOWN_ROLE_TEXT;
       else if (action.code === 1006) error = state.status === "connecting" ? "Can't reach the gateway" : "Lost connection to the gateway";
       return { ...state, status: "ended", speaking: false, error, lines: finalizeOpen(state.lines) };
     }
