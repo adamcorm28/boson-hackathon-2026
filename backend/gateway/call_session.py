@@ -200,8 +200,10 @@ class CallSession:
 
     async def _on_task_started(self, task_id: str, title: str, assignee_role: str) -> None:
         self.record.touched_task_ids.add(task_id)
-        await self._to_client({"type": "task.started", "task_id": task_id, "title": title, "assignee_role": assignee_role})
+        # Publish before awaiting anything: the watcher may already have seen the agent pick it up, and a
+        # late "todo" would pin the card there until the next status change.
         self.bus.publish("task.updated", {"task_id": task_id, "status": "todo", "assignee_role": assignee_role, "title": title})
+        await self._to_client({"type": "task.started", "task_id": task_id, "title": title, "assignee_role": assignee_role})
 
     # --- loops --------------------------------------------------------------------------
 

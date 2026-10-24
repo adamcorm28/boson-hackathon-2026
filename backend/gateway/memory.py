@@ -82,6 +82,10 @@ class CallMemory:
         self._records.append(record)
         for task_id in sorted(record.touched_task_ids):
             try:
+                # Paperclip wakes the assignee on every human comment and reopens a done task to todo, so a
+                # note on a delegated task means a wasted rerun. Its brief already carries the call's ask.
+                if (await company.get_issue(task_id)).origin == "voice":
+                    continue
                 await company.add_comment(task_id, f"Call note: {record.summary}")
             except (CompanyUnavailable, KeyError) as e:
                 log.warning("couldn't add call note to %s: %r", task_id, e)

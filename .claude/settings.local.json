@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/Users/adamcormier/Desktop/boson-hackathon-2026/scripts/paperclip-issue-update.sh:*)",
+      "Bash(/Users/adamcormier/Desktop/boson-hackathon-2026/scripts/paperclip:*)",
+      "Bash(curl:*)",
+      "Bash(env)",
+      "Bash(env:*)"
+    ],
+    "additionalDirectories": [
+      "/Users/adamcormier/.paperclip/instances/default/companies/a61ba5ef-4dff-46c8-a0f3-76f5ebfbdf25",
+      "/Users/adamcormier/.paperclip/instances/default/companies/a61ba5ef-4dff-46c8-a0f3-76f5ebfbdf25/acp-engine/agents/537d964e-1575-4ad3-8a53-a9d82d2bbba3",
+      "/Users/adamcormier/.paperclip/instances/default/companies/a61ba5ef-4dff-46c8-a0f3-76f5ebfbdf25/acp-engine/agents/81057cf7-735b-4aaa-ac12-5bf6366e7c61",
+      "/Users/adamcormier/.paperclip/instances/default/workspaces/537d964e-1575-4ad3-8a53-a9d82d2bbba3",
+      "/Users/adamcormier/.paperclip/instances/default/workspaces/81057cf7-735b-4aaa-ac12-5bf6366e7c61"
+    ],
+    "defaultMode": "default"
+  }
+}

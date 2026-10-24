@@ -55,7 +55,12 @@ paperclip-ui: ## Print the Paperclip UI address
 seed: ## Create or refresh Dunder Mifflin in Paperclip (idempotent)
 	DEMO_REPO="$(DEMO_REPO)" PAPERCLIP_URL="$(PAPERCLIP_URL)" $(PAPERCLIP_PY) paperclip/seed.py
 
-reset-repo: ## Put the demo repo back at the seeded bug (discards local changes there)
+reset-repo: ## Put the demo repo back at the seeded bug and delete fix/* branches, local and on origin
 	git -C "$(DEMO_REPO)" checkout -q main
 	git -C "$(DEMO_REPO)" reset -q --hard seeded-bug
-	@echo "$(DEMO_REPO) reset to seeded-bug"
+	@branches=$$(git -C "$(DEMO_REPO)" for-each-ref --format='%(refname:short)' 'refs/heads/fix/*'); \
+	if [ -n "$$branches" ]; then git -C "$(DEMO_REPO)" branch -q -D $$branches; fi
+	@remote=$$(git -C "$(DEMO_REPO)" ls-remote --heads origin 'fix/*' | sed 's|.*refs/heads/||'); \
+	if [ -n "$$remote" ]; then git -C "$(DEMO_REPO)" push -q origin --delete $$remote; fi
+	@git -C "$(DEMO_REPO)" fetch -q --prune origin
+	@echo "$(DEMO_REPO) reset to seeded-bug, fix/* branches deleted"

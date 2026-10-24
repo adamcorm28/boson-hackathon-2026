@@ -595,10 +595,80 @@ kbd {
 }
 
 .hud-col {
+  position: relative;
   display: grid;
   grid-template-columns: 80px 1fr 22px;
   align-items: center;
   gap: 6px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 0;
+  padding: 1px 2px;
+}
+
+.hud-col:hover:not(:disabled),
+.hud-col:focus-visible {
+  background: #1f1f36;
+  border-color: #5a5a8c;
+  outline: none;
+}
+
+/* Hover popover: the column's cards, to the left of the HUD. */
+.hud-peek {
+  display: none;
+  position: absolute;
+  right: calc(100% + 14px);
+  top: -6px;
+  z-index: 12;
+  width: 260px;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  background: #10101c;
+  border: 4px solid #5a5a8c;
+  box-shadow: 4px 4px 0 #000;
+  pointer-events: none;
+}
+
+.hud-col:hover .hud-peek,
+.hud-col:focus-visible .hud-peek {
+  display: flex;
+}
+
+.hud-peek-head {
+  letter-spacing: 1px;
+  color: var(--amber);
+}
+
+.hud-peek-card {
+  padding-left: 6px;
+  border-left: 3px solid var(--muted);
+  line-height: 1.1;
+}
+
+.hud-peek-card.voice {
+  border-left-color: var(--blue);
+}
+
+.hud-peek-hint {
+  margin-top: 4px;
+  font-size: 0.85em;
+}
+
+.hud-card {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+}
+
+.hud-card:hover:not(:disabled) {
+  background: none;
+  text-decoration: underline;
 }
 
 .hud-bar {

@@ -61,6 +61,17 @@ async def test_finish_writes_file_and_comments_touched_tasks(tmp_path, roles, co
     assert issue.comments[-1].body == "Call note: 2 lines"
 
 
+async def test_finish_skips_call_note_on_delegated_tasks(tmp_path, roles, company):
+    # A comment would reopen the agent's task to todo and rerun it.
+    task_id = await company.create_task("engineer", "Fix bulk discount", "make tests pass", "eng_lead")
+    mem = CallMemory(tmp_path, summarize_fn=fake_summary)
+    rec = mem.start(roles["eng_lead"])
+    rec.touched_task_ids.add(task_id)
+    await mem.finish(rec, company)
+    issue = await company.get_issue(task_id)
+    assert not any(c.body.startswith("Call note:") for c in issue.comments)
+
+
 async def test_recent_summaries_newest_first_limit_3(tmp_path, roles, company):
     mem = CallMemory(tmp_path, summarize_fn=fake_summary)
     for n, role in enumerate(["ceo", "eng_lead", "engineer", "sales_lead"]):
@@ -83,6 +94,9 @@ async def test_recent_summaries_survive_restart(tmp_path, roles, company):
 
 async def test_finish_tolerates_company_unavailable(tmp_path, roles):
     class Down:
+        async def get_issue(self, task_id):
+            raise CompanyUnavailable()
+
         async def add_comment(self, task_id, body):
             raise CompanyUnavailable()
 
