@@ -251,7 +251,9 @@ artifacts/                        # gitignored
 - `CompanyUnavailable` is already in `types.py` from B1. Every HTTP call uses `timeout=3.0` and converts transport errors and 5xx responses to `CompanyUnavailable`.
 - Mapping:
   - agent ID ↔ role, via `ids["agents"]`
-  - `origin` and `requested_by_role` are stored as a description footer `\n\n---\norigin: voice\nrequested_by: <role>`, unless B4 found labels or metadata. Issues without a footer are `origin: "seed"`.
+  - `origin` and `requested_by_role` are stored as a description footer `\n\n---\norigin: voice\nrequested_by: <role>`. Seed issues carry `\n\n---\norigin: seed\nowner: <role>` and are unassigned (assigning wakes the agent), so **`assignee_role` = the role of `assigneeAgentId`, or else the footer's `owner`**.
+  - `task_id`: seed issues use their seed ID (`DM-101`, via the reverse of `ids["issues"]`, which is keyed by seed task ID); voice tasks use the Paperclip `identifier` (e.g. `DUNA-11`). `get_issue` accepts either.
+  - `PaperclipCompany.from_env()` builds it from `PAPERCLIP_URL` and `backend/company/data/paperclip_ids.json` (called by `get_company()` since B1).
   - `flagged` = the priority is `critical`/`high`, or the seed title is in the flagged list
   - `create_task` POSTs the issue with `assigneeAgentId` set, which wakes the agent
   - `get_agent_status`: `working` if the role has an `in_progress` issue, with `last_comment` = the newest comment body on it, truncated to 300 chars

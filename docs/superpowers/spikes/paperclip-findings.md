@@ -82,6 +82,15 @@ On the throwaway task "Write a haiku about paper":
 - **B7 seed:** after creating each agent, call `POST /api/agents/{id}/resume`.
 - **B8 status:** use the agent's `status` (`idle` or running), or an `in_progress` issue assigned to the role, to derive `AgentStatus`. `GET /api/issues/{id}/runs` gives run timing.
 
+## Learned while seeding (B7)
+
+- **`in_progress` needs an assignee.** Creating an unassigned issue with `status: in_progress` fails with `400 in_progress issues require an assignee`. `blocked`, `done` and `in_review` are fine unassigned.
+- **New agents auto-ready.** They are created `paused`, then move to `idle` (`lifecycleState: ready`) by themselves within a few seconds. `POST /resume` on an agent that isn't paused returns `409`; treat that as success.
+- **Instructions have their own endpoint.** `PATCH /api/agents/{id}` with `instructionsBundle` returns `409 Unsupported configuration field`. To update `AGENTS.md`:
+  1. `GET /api/agents/{id}/instructions-bundle/file?path=AGENTS.md`, which returns `content`, `contentHash` and `revision.id`
+  2. `PUT /api/agents/{id}/instructions-bundle/file` with `{path, content, baseRevisionId: revision.id}`. Without `baseRevisionId` it returns `422 INSTRUCTION_BASE_REQUIRED`.
+- **The issue prefix comes from the company name** and can't be set. Ours is `DUNA` because another company already holds `DUN`. Seed IDs (`DM-101`…) map to Paperclip IDs through `paperclip_ids.json` → `issues`.
+
 ## Cleanup
 
 The throwaway company "Spike Co (throwaway)" was deleted after this spike.

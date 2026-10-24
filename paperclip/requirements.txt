@@ -3,3 +3,4 @@ openpyxl
 httpx
 pytest
 pytest-asyncio
+pyyaml
