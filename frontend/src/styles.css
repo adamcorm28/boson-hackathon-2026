@@ -391,6 +391,7 @@ kbd {
 
 .office {
   position: relative;
+  isolation: isolate; /* sprites' row-based z-index stays inside the map, under overlays */
   image-rendering: pixelated;
   border: 4px solid #0c0c14;
 }
