@@ -301,6 +301,7 @@ artifacts/                        # gitignored
 
 - [ ] **Step 1:** Write `reset_demo.sh`. It:
   - runs `git -C ../dunder-mifflin-infinity checkout main && git reset --hard seeded-bug` and deletes the `fix/*` branches
+  - on GitHub (private repo `thomas-m1/dunder-mifflin-infinity`): closes open PRs (`gh pr close --delete-branch`) and deletes remote `fix/*` branches, so `main` on origin stays at `seeded-bug`
   - empties `artifacts/` and `backend/data/calls/`
   - cancels voice-origin issues through the API
   - re-runs `seed.py`
