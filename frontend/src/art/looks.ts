@@ -23,3 +23,9 @@ export const DEFAULT_LOOK: Look = { hair: "#555", skin: "#e6be98", shirt: "#6a6a
 export const PLAYER_LOOK: Look = { hair: "#a0a0a0", skin: "#efc9a4", shirt: "#3a3a42", tie: "#2a6a9a", pants: "#2a2a30" };
 
 export const lookFor = (roleId: string): Look => LOOKS[roleId] ?? DEFAULT_LOOK;
+
+/** The coffee-run interns. */
+export const INTERN_LOOKS: Record<string, Look> = {
+  "intern-1": { hair: "#c88a3a", skin: "#f2cba4", shirt: "#5a9a5a", tie: "#e8e8e8", pants: "#3a3a48" },
+  "intern-2": { hair: "#1e1410", skin: "#c68a5c", shirt: "#b85a8a", tie: "#e8e8e8", pants: "#2e2e3a" },
+};

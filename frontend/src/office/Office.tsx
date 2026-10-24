@@ -1,8 +1,9 @@
 // The office floor: tiles, desks with their employees, and you. Thin rendering over map.ts/movement.ts.
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AgentState, Role } from "../api/types";
-import { lookFor, PLAYER_LOOK } from "../art/looks";
+import { INTERN_LOOKS, lookFor, PLAYER_LOOK } from "../art/looks";
 import { Sprite } from "../art/Sprite";
+import { createWorld, TICK_MS, tickWorld } from "./ambient";
 import { layoutDesks, MAP_HEIGHT, MAP_WIDTH, OFFICE_MAP, START, type Pos } from "./map";
 import { distance, nearby, step, type Dir } from "./movement";
 
@@ -21,7 +22,28 @@ const KEY_DIRS: Record<string, Dir> = {
   d: "right",
 };
 
-const TILE_CLASS: Record<string, string> = { "#": "wall", ".": "floor", D: "door", W: "board", R: "rug" };
+const TILE_CLASS: Record<string, string> = {
+  "#": "wall",
+  ".": "floor",
+  D: "door",
+  W: "board",
+  R: "rug",
+  C: "floor coffee-machine",
+  K: "floor copier",
+  V: "floor cooler",
+  P: "floor plant",
+};
+
+function Cat() {
+  const rows = ["k......k", "kk....kk", "kkkkkkkk", "kekkkkek", "kkkkkkkk", ".kkkkkk.k", ".k.kk.k.k"];
+  return (
+    <svg width={27} height={21} viewBox="0 0 9 7" shapeRendering="crispEdges" aria-hidden>
+      {rows.flatMap((row, y) =>
+        [...row].map((c, x) => (c === "." ? null : <rect key={`${x},${y}`} x={x} y={y} width={1} height={1} fill={c === "e" ? "#9adf5a" : "#3a3030"} />)),
+      )}
+    </svg>
+  );
+}
 
 interface Props {
   roles: Role[];
@@ -56,6 +78,17 @@ export function Office({
   const [stepping, setStepping] = useState(false);
   const posRef = useRef(pos);
   posRef.current = pos;
+
+  // Ambient life (interns, quips, the cat). Q toggles it, e.g. for clean demo takes.
+  const [quirks, setQuirks] = useState(true);
+  const [world, setWorld] = useState(createWorld);
+  const ambientEnv = useRef({ desks, names: {} as Record<string, string>, busy: activeRoleId });
+  ambientEnv.current = { desks, names: Object.fromEntries(roles.map((r) => [r.id, firstName(r)])), busy: activeRoleId };
+  useEffect(() => {
+    if (!quirks || desks.length === 0) return;
+    const t = setInterval(() => setWorld((w) => tickWorld(w, ambientEnv.current, Math.random)), TICK_MS);
+    return () => clearInterval(t);
+  }, [quirks, desks.length]);
 
   // Latest props for the key handlers, which are registered once.
   const live = useRef({ desks, paused, onDial, onOpenBoard });
@@ -96,6 +129,8 @@ export function Office({
         else if (near?.kind === "board") live.current.onOpenBoard();
       } else if (key === "b" && !e.repeat) {
         live.current.onOpenBoard();
+      } else if (key === "q" && !e.repeat) {
+        setQuirks((q) => !q);
       }
     };
 
@@ -158,26 +193,56 @@ export function Office({
           const isNear = near?.kind === "desk" && near.roleId === d.roleId;
           const hasResult = (bang[d.roleId]?.length ?? 0) > 0;
           const working = agents[d.roleId] === "working";
+          const quip = quirks && !onCall ? world.bubbles.find((b) => b.key === `role:${d.roleId}`) : undefined;
+          const hasCoffee = quirks && (world.coffee[d.roleId] ?? 0) > world.tick;
+          // Priority above their head: "!" > a quip > the nameplate.
+          let above = null;
+          if (hasResult) above = <div className="bang" title="Has a finished result for you">!</div>;
+          else if (quip) above = <div className="speech">{quip.text}</div>;
+          else if (isNear || onCall) above = <div className="nameplate">{firstName(role)}</div>;
           return (
             <div key={d.roleId}>
               <div
                 className={`employee ${onCall ? "on-call" : ""}`}
                 style={{ left: d.x * TILE + 1, top: d.y * TILE - 30, zIndex: d.y * 10 + 1 }}
               >
-                {hasResult ? (
-                  <div className="bang" title="Has a finished result for you">!</div>
-                ) : (
-                  (isNear || onCall) && <div className="nameplate">{firstName(role)}</div>
-                )}
+                {above}
                 <Sprite look={lookFor(d.roleId)} />
               </div>
               <div className="desk" style={{ left: d.x * TILE, top: d.y * TILE, zIndex: d.y * 10 + 2 }}>
                 <div className={`monitor ${working ? "on" : ""}`} title={working ? "Working" : undefined} />
                 {ringing[d.roleId] && <div className="phone" title="Ringing" />}
+                {hasCoffee && <div className="cup" title="Coffee" />}
+                {quirks && role?.desk === "dwight_desk" && <div className="jello" title="A stapler in jello" />}
               </div>
             </div>
           );
         })}
+
+        {quirks &&
+          world.interns.map((intern) => {
+            const speech = world.bubbles.find((b) => b.key === `npc:${intern.id}`);
+            const carrying = intern.mode === "delivering" || intern.mode === "handing";
+            return (
+              <div
+                key={intern.id}
+                className="npc"
+                title={`Intern ${intern.name}`}
+                style={{ left: intern.pos.x * TILE + 4, top: intern.pos.y * TILE - 6, zIndex: intern.pos.y * 10 + 4 }}
+              >
+                {speech && <div className="speech">{speech.text}</div>}
+                <Sprite look={INTERN_LOOKS[intern.id] ?? PLAYER_LOOK} pixel={2.4} stepping={world.tick % 2 === 0 && intern.path.length > 0} />
+                {carrying && <div className="carry-cup" />}
+              </div>
+            );
+          })}
+
+        {quirks && (
+          <div className="npc cat" title="The office cat" style={{ left: world.cat.x * TILE + 4, top: world.cat.y * TILE + 8, zIndex: world.cat.y * 10 + 3 }}>
+            {world.bubbles.some((b) => b.key === "cat") && <div className="speech">{world.bubbles.find((b) => b.key === "cat")!.text}</div>}
+            <Cat />
+          </div>
+        )}
 
         <div className="player" style={{ left: pos.x * TILE + 1, top: pos.y * TILE - 12, zIndex: pos.y * 10 + 5 }}>
           <Sprite look={PLAYER_LOOK} stepping={stepping} />
@@ -186,7 +251,7 @@ export function Office({
 
       <div className="keybar">
         <span className="hint">{hint}</span>
-        <span className="muted">←↑↓→/WASD move · E call · Esc hang up · B board</span>
+        <span className="muted">←↑↓→/WASD move · E call · Esc hang up · B board · Q office life {quirks ? "on" : "off"}</span>
       </div>
     </div>
   );

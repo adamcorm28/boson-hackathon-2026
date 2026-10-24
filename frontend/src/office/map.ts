@@ -11,16 +11,18 @@ export interface Desk extends Pos {
 }
 
 // # wall · . floor · D door · W whiteboard (conference room wall) · R reception carpet
+// Decor (blocking): C coffee machine · K copier · V water cooler · P plant
 // Michael's office top-left, conference room top-right, bullpen in the middle with Jim and Dwight's
-// facing desks, reception by the entrance (left), accounting corner bottom-left, the annex bottom-right.
+// facing desks, reception by the entrance (left), accounting corner bottom-left, the annex bottom-right,
+// and the kitchenette (coffee, copier, water cooler) in the bottom-middle alcove.
 export const OFFICE_MAP: string[] = [
   "####################WWW###",
-  "#......#..........#......#",
+  "#.....P#..........#......#",
   "#......#..........#......#",
   "#......#..........D......#",
   "#......D..........#......#",
   "########..........########",
-  "#........................#",
+  "#.......................P#",
   "#........................#",
   "D.RRR....................#",
   "#.RRR....................#",
@@ -28,7 +30,7 @@ export const OFFICE_MAP: string[] = [
   "#................#########",
   "#......#.........#.......#",
   "#......#.........D.......#",
-  "#......#.........#.......#",
+  "#......#.K..C.V..#.......#",
   "##########################",
 ];
 

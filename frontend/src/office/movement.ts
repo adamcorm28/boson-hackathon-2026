@@ -10,7 +10,7 @@ const DELTA: Record<Dir, Pos> = {
   right: { x: 1, y: 0 },
 };
 
-const BLOCKING = new Set(["#", "W"]);
+const BLOCKING = new Set(["#", "W", "C", "K", "V", "P"]);
 
 export function isWalkable(p: Pos, desks: Desk[], map: string[] = OFFICE_MAP): boolean {
   if (p.y < 0 || p.y >= map.length || p.x < 0 || p.x >= map[p.y].length) return false;
