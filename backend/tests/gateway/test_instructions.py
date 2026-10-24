@@ -81,3 +81,8 @@ async def test_briefing_lists_finished_research(roles, company):
     text = await build_briefing(roles["cfo"], company, [], [], roles)
     assert "## Research you finished recently" in text
     assert "Research: finance tools" in text and "Three tools stand out." in text
+
+
+def test_tool_rules_answer_finished_research_from_briefing():
+    from gateway.instructions import TOOL_RULES
+    assert "answer right away from the summary in your briefing" in TOOL_RULES

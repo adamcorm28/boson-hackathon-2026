@@ -568,3 +568,11 @@ async def test_live_avatar_failure_falls_back_to_plain_audio(harness):
     assert {"type": "avatar.unavailable", "reason": "error"} in harness.client.json
     harness.client.disconnect()
     await harness.task
+
+
+def test_lookup_claim_catches_kevins_stall_phrases():
+    # Live call: Kevin said these twice and never called a tool.
+    from gateway.call_session import LOOKUP_CLAIM
+    for phrase in ("Just a moment while I pull up the full findings.",
+                   "I'm digging into those competitor numbers for you right now."):
+        assert LOOKUP_CLAIM.search(phrase), phrase

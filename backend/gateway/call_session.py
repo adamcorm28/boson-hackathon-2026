@@ -46,8 +46,8 @@ USER_REQUEST = re.compile(
 )
 # ...and sometimes says it's looking something up without calling a tool, then stalls.
 LOOKUP_CLAIM = re.compile(
-    r"(\blet me (check|look|pull|see|grab|find)|\bi'?m (checking|looking|pulling)|\bchecking (your|the|on|that)|"
-    r"\bpulling (up|that)|\bone (sec|second|moment)\b|\bgive me a (sec|second)|\bbear with me)",
+    r"(\blet me (check|look|pull|see|grab|find)|\bi'?m (checking|looking|pulling|digging)|\bchecking (your|the|on|that)|"
+    r"\bpull(ing)? (up|that)|\b(one|just a) (sec|second|moment)\b|\bgive me a (sec|second)|\bbear with me)",
     re.IGNORECASE,
 )
 LOOKUP_NUDGE = (
