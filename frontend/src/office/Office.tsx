@@ -218,7 +218,7 @@ export function Office({
         <span className="hint">{hint}</span>
         <span className="keys">
           <kbd>←↑↓→</kbd> move <kbd>E</kbd> call <kbd>Esc</kbd> hang up <kbd>B</kbd> board <kbd>Q</kbd> office life{" "}
-          {quirks ? "on" : "off"}
+          {quirks ? "on" : "off"} <kbd>M</kbd> classic
         </span>
       </div>
     </div>

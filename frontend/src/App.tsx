@@ -5,7 +5,9 @@ import { boardReducer } from "./board/boardReducer";
 import { Whiteboard } from "./board/Whiteboard";
 import { CallWindow } from "./call/CallWindow";
 import { useCall } from "./call/useCall";
+import { ContactList } from "./contacts/ContactList";
 import { DevPanel } from "./dev/DevPanel";
+import { loadStoredMode, otherMode, pickMode, storeMode, type Mode } from "./modes";
 import { Hud } from "./office/Hud";
 import { Office } from "./office/Office";
 import { initialOfficeState, officeReducer } from "./office/officeReducer";
@@ -27,9 +29,24 @@ function OfficeApp() {
   const [boardOpen, setBoardOpen] = useState(false);
   const [resultTaskId, setResultTaskId] = useState<string | null>(null);
   const [titleOpen, setTitleOpen] = useState(() => !new URLSearchParams(location.search).has("notitle"));
+  const [mode, setMode] = useState<Mode>(() => pickMode(location.search, loadStoredMode()));
   const [office, officeDispatch] = useReducer(officeReducer, undefined, () => initialOfficeState());
   const call = useCall(gateway);
   const onLine = call.state.status === "connecting" || call.state.status === "live" ? call.state.roleId : null;
+  const overlayOpen = titleOpen || boardOpen || resultTaskId !== null;
+
+  useEffect(() => storeMode(mode), [mode]);
+
+  // M switches between arcade and classic (not mid-call or behind an overlay).
+  const canSwitch = !overlayOpen && call.state.status === "idle";
+  useEffect(() => {
+    if (!canSwitch) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === "m" && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey) setMode(otherMode);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [canSwitch]);
 
   useEffect(() => {
     const loadRoles = () =>
@@ -92,21 +109,51 @@ function OfficeApp() {
       <header className="title">
         <h1>DUNDER MIFFLIN · SCRANTON</h1>
         <span className="muted">Infinity Voice™</span>
+        <div className="mode-switch" role="radiogroup" aria-label="Mode">
+          {(["arcade", "classic"] as const).map((m) => (
+            <button
+              key={m}
+              role="radio"
+              aria-checked={mode === m}
+              className={mode === m ? "selected" : ""}
+              disabled={!canSwitch && mode !== m}
+              onClick={() => setMode(m)}
+              title={m === "arcade" ? "Walk the office (M)" : "Phone contact list (M)"}
+            >
+              {m === "arcade" ? "ARCADE" : "CLASSIC"}
+            </button>
+          ))}
+        </div>
       </header>
       {error && <p className="error">Can't reach the gateway: {error}</p>}
 
-      <div className="stage">
-        <Office
-          roles={roles}
-          activeRoleId={onLine}
-          onDial={dial}
-          onHangup={call.hangup}
-          onOpenBoard={() => setBoardOpen(true)}
-          paused={titleOpen || boardOpen || resultTaskId !== null}
-          agents={agents}
-          bang={office.bang}
-          ringing={office.ringing}
-        />
+      <div className={`stage ${mode}`}>
+        {mode === "arcade" ? (
+          <Office
+            roles={roles}
+            activeRoleId={onLine}
+            onDial={dial}
+            onHangup={call.hangup}
+            onOpenBoard={() => setBoardOpen(true)}
+            paused={overlayOpen}
+            agents={agents}
+            bang={office.bang}
+            ringing={office.ringing}
+          />
+        ) : (
+          <ContactList
+            roles={roles}
+            board={board}
+            agents={agents}
+            bang={office.bang}
+            ringing={office.ringing}
+            onLine={onLine}
+            paused={overlayOpen || call.state.status !== "idle"}
+            onDial={dial}
+            onOpenBoard={() => setBoardOpen(true)}
+            onOpenResult={openResult}
+          />
+        )}
         <Hud
           board={board}
           roles={roles}
@@ -132,7 +179,7 @@ function OfficeApp() {
         <ResultViewer gateway={gateway} roles={roles} taskId={resultTaskId} onClose={() => setResultTaskId(null)} />
       )}
 
-      {titleOpen && <TitleCard mock={USE_MOCK} onStart={() => setTitleOpen(false)} />}
+      {titleOpen && <TitleCard mode={mode} onModeChange={setMode} mock={USE_MOCK} onStart={() => setTitleOpen(false)} />}
 
       <CallWindow state={call.state} roles={roles} talking={call.talking} media={call.media} muted={call.muted} onToggleMute={call.toggleMute} onHangup={call.hangup} onRetryMic={call.retryMic} />
     </main>
