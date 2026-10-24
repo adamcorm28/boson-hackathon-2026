@@ -1,0 +1,17 @@
+{
+  "branch": "Dunder Mifflin Scranton",
+  "as_of": "2026-10-23",
+  "monthly_sales": 700000,
+  "gross_margin": 0.22,
+  "q4_goal": "Beat the Stamford branch on Q4 sales",
+  "q4_target_sales": 2250000,
+  "q4_sales_to_date": 520000,
+  "stamford_q4_sales_to_date": 541000,
+  "headline_kpis": {
+    "active_customers": 312,
+    "orders_this_month": 1184,
+    "average_order_value": 438,
+    "infinity_share_of_orders": 0.18,
+    "open_customer_complaints": 3
+  }
+}

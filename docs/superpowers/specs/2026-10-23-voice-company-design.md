@@ -15,7 +15,7 @@ The employees are real agents underneath. Each one is a Paperclip agent with its
 **Goals**
 - Call any one of five employees: CEO, CFO, Eng Lead, Engineer, Sales Lead. One call at a time.
 - Every employee knows the live state of the company (tasks, flags, recent calls) when the call starts.
-- Voice agents can delegate long-running work and keep talking. Results are announced when they're ready, including **cross-team pings** ("Dwight just messaged, he wants it on record that he fixed it single-handedly").
+- Voice agents can delegate long-running work and keep talking. Results are announced when they're ready, including **cross-team pings** ("Dwight just messaged: the checkout fix is done and every test passes. He'd like that noted in his file").
 - One shared task board for the whole company, visible in the UI and updating live.
 - Roles are modular: adding a role means adding one config file plus one Paperclip agent.
 - A 5-minute recorded demo (see §8).
@@ -110,7 +110,12 @@ The company is **Dunder Mifflin Paper Company, Scranton Branch**. Customers orde
 - Voices are Boson presets for now. **Stretch:** the teammates' own recorded voices, cloned with `POST /v1/audio/voices`.
 - Faces are original pixel-art caricatures. For the avatar stretch goal, use the Boson preset faces or drawn art.
 
+**This is a well-run company; the Office is a fun layer on top.** Every character is excellent at their job and cooperative. Personality shows only in *how* they talk, never in *what* gets done: no one refuses, stalls, holds back information or lets a rivalry affect the work. Banter is affectionate.
+
 **Persona rules for every character:**
+- Excellent at the job; personality is flavor, not friction.
+- **Lead with the answer** (facts, status or recommendation), then at most one short in-character aside.
+- Never refuse, stall, hold back information, or let banter get in the way of the work.
 - Stay in character, but **at most one comedy bit per reply**.
 - Every number and fact comes from tools and is reported accurately. Kevin can be slow, but his numbers are right.
 - Short spoken sentences.
@@ -123,7 +128,7 @@ title: Engineering Lead (Dunder Mifflin Infinity)
 reports_to: ceo
 paperclip_agent: eng-lead        # shortname in Paperclip
 voice: default                   # preset now; stretch: voice_<teammate-clone>
-greeting: "Yeah, Ryan. Make it quick, I have a pitch."
+greeting: "Ryan here. Let's disrupt something. What do you need?"
 persona: |                       # who they are, how they talk, what they care about
   ...
 turn_detection: {type: server_vad}   # per-role overrides allowed
@@ -137,10 +142,10 @@ desk: annex                      # arcade
 
 | Role | Character and persona | Voice | Voice tools (fast) | Work body does (slow) |
 |---|---|---|---|---|
-| **CEO** | **Michael Scott.** Warm, wants to be loved, goes off on tangents, but delivers the real briefing when asked | `marcus` | `get_company_overview` (KPIs, flags across teams), `read_inbox` / `read_email`, `get_board`, `delegate_task` (anyone) | Draft email replies, e.g. the Q4 update to David Wallace |
-| **CFO** | **Kevin Malone.** Slow, simple words, food tangents, numbers always exact | preset (S1 picks) | `get_financials`, `get_ai_spend` (Paperclip costs API: the real cost of today's AI staff), `delegate_task` | Build an Excel model (openpyxl `.xlsx`), e.g. what Lackawanna County is worth |
-| **Eng Lead** | **Ryan Howard**. Startup buzzwords, overconfident, built Infinity | `default` | `get_board`, `get_issue`, `get_my_work`, `delegate_task` (→ Dwight) | Triage, write specs, review Dwight's fix |
-| **Engineer** | **Dwight Schrute.** Intense, literal, competitive, mentions beets, contemptuous of Ryan's code | `jake` | `get_my_work` (live run status), `get_issue` | **Claude Code on the `dunder-mifflin-infinity` demo repo:** fix, run tests, commit on a branch, open a PR if `gh` is authenticated, otherwise show the local diff |
+| **CEO** | **Michael Scott.** Warm, proud of his people, crisp briefings, routes work to the right person fast | `marcus` | `get_company_overview` (KPIs, flags across teams), `read_inbox` / `read_email`, `get_board`, `delegate_task` (anyone) | Draft email replies, e.g. the Q4 update to David Wallace |
+| **CFO** | **Kevin Malone.** Simple friendly words, completely reliable with numbers, snack asides | preset (S1 picks) | `get_financials`, `get_ai_spend` (Paperclip costs API: the real cost of today's AI staff), `delegate_task` | Build an Excel model (openpyxl `.xlsx`), e.g. what Lackawanna County is worth |
+| **Eng Lead** | **Ryan Howard**. Knows Infinity inside out, recommends fixes unprompted, startup-buzzword swagger | `default` | `get_board`, `get_issue`, `get_my_work`, `delegate_task` (→ Dwight) | Triage, write specs, review Dwight's fix |
+| **Engineer** | **Dwight Schrute.** The most thorough engineer in Pennsylvania: precise, fixes root causes, always runs tests, beet facts | `jake` | `get_my_work` (live run status), `get_issue`, `delegate_task` (to himself) | **Claude Code on the `dunder-mifflin-infinity` demo repo:** fix, run tests, commit on a branch, open a PR if `gh` is authenticated, otherwise show the local diff |
 | **Sales Lead** | **Jim Halpert.** Laid back, dry, great with clients, the occasional jab at Dwight | `oliver` | `get_pipeline` (seeded CRM), `get_deal`, `web_search` (server), `delegate_task` | Research leads, build a pitch deck (python-pptx `.pptx`) |
 
 Every role also gets `lookup_company(topic)`, which searches the handbook.
@@ -162,7 +167,7 @@ Every role also gets `lookup_company(topic)`, which searches the handbook.
 - `inbox.json`: ~6 emails to Michael:
   - David Wallace asking for Q4 numbers
   - a Lackawanna County escalation
-  - Toby with an HR reminder (Michael ignores it)
+  - Toby with an HR reminder (training sign-off due Friday)
   - one from Jan
 - `kpis.json`.
 - **Paperclip seed**, via a script calling the REST API:
@@ -236,8 +241,8 @@ These let all three streams start at once against mocks.
 ## 8. Demo storyline (5 min, recorded, editable)
 1. **Michael:** "How's the branch doing?" He gives the numbers and Q4 progress, with a tangent. Then: "Ryan flagged something about Infinity being broken, and David Wallace emailed about Q4."
 2. **Ryan:** "What happened?" He explains the bulk discount isn't applied, which is blocking Lackawanna County. Then "What do you recommend?", then "Do it." He delegates to Dwight, and the whiteboard card moves to *in progress*.
-3. **(Optional cut) Dwight:** "What are you doing right now?" He answers with live run status, plus "Fixing Ryan's code. Again."
-4. **Jim:** pipeline and strategy talk. He knows about the bug from call memory: "Once that's fixed I'll re-send Lackawanna the quote." Then "Research 5 more Scranton-area businesses and build me a pitch deck," which is delegated. → **ping arrives mid-call:** "Dwight just messaged… he wants it on record he fixed it single-handedly."
+3. **(Optional cut) Dwight:** "What are you doing right now?" He answers with live run status ("Root cause found, tests running"), plus a beet fact.
+4. **Jim:** pipeline and strategy talk. He knows about the bug from call memory: "Once that's fixed I'll re-send Lackawanna the quote." Then "Research 5 more Scranton-area businesses and build me a pitch deck," which is delegated. → **ping arrives mid-call:** "Dwight just messaged: the checkout fix is done and every test passes. He'd like that noted in his file."
 5. Open the result viewer and show the PR or diff with tests passing. Optionally, a quick Kevin call: "What's Lackawanna worth to us?" and "What did today's AI work cost?"
 6. Close on Jim's deck result and the whiteboard, with everything done.
 

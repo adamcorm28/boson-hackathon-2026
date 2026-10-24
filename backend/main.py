@@ -8,6 +8,7 @@ Run with:  uvicorn main:app --reload
 """
 
 import asyncio
+import logging
 import os
 import ssl
 from typing import Literal, Optional
@@ -19,10 +20,16 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 # Load backend/.env regardless of the directory uvicorn is started from.
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
+logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"), format="%(levelname)s %(name)s: %(message)s")
+
+# Imported after load_dotenv: the gateway reads COMPANY_BACKEND / ROLES_DIR at import.
+from gateway import app_state as gateway_app_state  # noqa: E402
+from gateway import http as gateway_http  # noqa: E402
 
 BOSON_API_KEY = os.environ["BOSON_API_KEY"]
 
@@ -49,11 +56,22 @@ app.add_middleware(
     expose_headers=["X-Video-Id"],
 )
 
+# Voice gateway: /roles /board /tasks /events /call/{role_id}, plus agent artifacts.
+app.include_router(gateway_http.router)
+gateway_app_state.ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/artifacts", StaticFiles(directory=gateway_app_state.ARTIFACTS_DIR), name="artifacts")
+
 client = httpx.AsyncClient(headers=AUTH_HEADERS, timeout=120)
+
+
+@app.on_event("startup")
+async def start_gateway():
+    await gateway_app_state.startup()
 
 
 @app.on_event("shutdown")
 async def close_client():
+    await gateway_app_state.shutdown()
     await client.aclose()
 
 
