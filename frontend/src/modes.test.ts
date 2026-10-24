@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { otherMode, pickMode } from "./modes";
+import { otherMode, pickMode, pickScheme } from "./modes";
 
 describe("pickMode", () => {
   it("the URL wins", () => {
@@ -20,5 +20,18 @@ describe("pickMode", () => {
   it("otherMode flips between the two", () => {
     expect(otherMode("arcade")).toBe("classic");
     expect(otherMode("classic")).toBe("arcade");
+  });
+});
+
+describe("pickScheme", () => {
+  it("the URL wins, then the stored choice, then the system setting", () => {
+    expect(pickScheme("?scheme=dark", "light", false)).toBe("dark");
+    expect(pickScheme("", "light", true)).toBe("light");
+    expect(pickScheme("", null, true)).toBe("dark");
+    expect(pickScheme("", null, false)).toBe("light");
+  });
+
+  it("ignores junk values", () => {
+    expect(pickScheme("?scheme=sepia", "neon", true)).toBe("dark");
   });
 });

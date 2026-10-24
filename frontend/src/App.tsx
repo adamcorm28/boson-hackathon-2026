@@ -8,7 +8,17 @@ import { CallWindow } from "./call/CallWindow";
 import { useCall } from "./call/useCall";
 import { ContactList } from "./contacts/ContactList";
 import { DevPanel } from "./dev/DevPanel";
-import { loadStoredMode, otherMode, pickMode, storeMode, type Mode } from "./modes";
+import {
+  loadStoredMode,
+  loadStoredScheme,
+  otherMode,
+  pickMode,
+  pickScheme,
+  storeMode,
+  storeScheme,
+  type Mode,
+  type Scheme,
+} from "./modes";
 import { Hud } from "./office/Hud";
 import { Office } from "./office/Office";
 import { initialOfficeState, officeReducer } from "./office/officeReducer";
@@ -16,6 +26,24 @@ import { ResultViewer } from "./results/ResultViewer";
 import { TitleCard } from "./ui/TitleCard";
 
 const MOVED_HIGHLIGHT_MS = 2500;
+
+const systemPrefersDark = () => window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
+
+function SchemeIcon({ scheme }: { scheme: Scheme }) {
+  // Shows what you'd switch to: a moon in light mode, a sun in dark mode.
+  return scheme === "light" ? (
+    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden>
+      <path fill="currentColor" d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+    </svg>
+  ) : (
+    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden>
+      <circle cx="12" cy="12" r="4.5" fill="currentColor" />
+      <g stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" />
+      </g>
+    </svg>
+  );
+}
 
 // The gateway test panel lives at ?dev
 export default function App() {
@@ -31,6 +59,7 @@ function OfficeApp() {
   const [resultTaskId, setResultTaskId] = useState<string | null>(null);
   const [titleOpen, setTitleOpen] = useState(() => !new URLSearchParams(location.search).has("notitle"));
   const [mode, setMode] = useState<Mode>(() => pickMode(location.search, loadStoredMode()));
+  const [scheme, setScheme] = useState<Scheme>(() => pickScheme(location.search, loadStoredScheme(), systemPrefersDark()));
   const [office, officeDispatch] = useReducer(officeReducer, undefined, () => initialOfficeState());
   const call = useCall(gateway);
   const onLine = call.state.status === "connecting" || call.state.status === "live" ? call.state.roleId : null;
@@ -42,7 +71,15 @@ function OfficeApp() {
   // The page background and overlays follow the mode's theme too.
   useEffect(() => {
     document.body.dataset.theme = mode;
-  }, [mode]);
+    document.body.dataset.scheme = scheme;
+  }, [mode, scheme]);
+  const toggleScheme = useCallback(() => {
+    setScheme((s) => {
+      const next = s === "dark" ? "light" : "dark";
+      storeScheme(next); // only an explicit choice is remembered; otherwise the system setting applies
+      return next;
+    });
+  }, []);
 
   // M switches between arcade and classic (not mid-call or behind an overlay).
   const canSwitch = !overlayOpen && call.state.status === "idle";
@@ -115,7 +152,7 @@ function OfficeApp() {
   const dismissToast = useCallback((id: string) => officeDispatch({ type: "dismiss_toast", id }), []);
 
   return (
-    <main className={`app theme-${mode}`}>
+    <main className={`app theme-${mode} scheme-${scheme}`}>
       <header className="title">
         {mode === "arcade" ? (
           <>
@@ -127,6 +164,16 @@ function OfficeApp() {
             <h1>Dunder Mifflin</h1>
             <span className="muted">Scranton Branch · Infinity Voice</span>
           </>
+        )}
+        {mode === "classic" && (
+          <button
+            className="scheme-toggle"
+            onClick={toggleScheme}
+            title={scheme === "dark" ? "Light mode" : "Dark mode"}
+            aria-label={scheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            <SchemeIcon scheme={scheme} />
+          </button>
         )}
         <div className="mode-switch" role="radiogroup" aria-label="Mode">
           {(["arcade", "classic"] as const).map((m) => (

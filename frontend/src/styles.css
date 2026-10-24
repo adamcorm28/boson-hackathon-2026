@@ -1712,6 +1712,12 @@ body[data-theme="classic"] {
   color-scheme: light;
 }
 
+body[data-theme="classic"][data-scheme="dark"] {
+  background: #111318;
+  color: #e7e9ec;
+  color-scheme: dark;
+}
+
 .theme-classic {
   --c-bg: #f4f5f7;
   --c-surface: #ffffff;
@@ -1725,11 +1731,67 @@ body[data-theme="classic"] {
   --c-amber: #a86400;
   --c-red: #cf3030;
   --c-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 4px 12px rgba(16, 24, 40, 0.06);
+  --c-shadow-pop: 0 8px 24px rgba(16, 24, 40, 0.14);
+  --c-shadow-modal: 0 24px 64px rgba(16, 24, 40, 0.25);
+  --c-overlay: rgba(16, 24, 40, 0.45);
+  --c-on-accent: #ffffff;
+  --c-accent-hover: #174e9f;
+  --c-selected-border: #c9dbf6;
+  --c-presence-working: #e6a700;
+  --c-call-bg: #e8f6ee;
+  --c-missed-bg: #fdecec;
+  --c-column: #eceef2;
+  --c-card-hover-border: #cfd5dd;
+  --c-title-glow: #ffffff;
+  --c-code-bg: #f6f8fa;
+  --c-add-bg: #e6ffec;
+  --c-add-fg: #116329;
+  --c-del-bg: #ffebe9;
+  --c-del-fg: #82071e;
+  --c-hunk-bg: #ddf4ff;
+  --c-hunk-fg: #0550ae;
+  --c-context-fg: #424a53;
   --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   color: var(--c-text);
   font-size: 15px;
   padding: 0 0 32px;
   gap: 20px;
+}
+
+/* Dark mode (the sun/moon toggle in the header). */
+.theme-classic.scheme-dark {
+  --c-bg: #111318;
+  --c-surface: #1b1e24;
+  --c-subtle: #22262e;
+  --c-border: #2e333c;
+  --c-text: #e7e9ec;
+  --c-muted: #9aa2ae;
+  --c-accent: #5b9bff;
+  --c-accent-soft: rgba(91, 155, 255, 0.14);
+  --c-accent-hover: #7aafff;
+  --c-on-accent: #0d1626;
+  --c-green: #3ccf7f;
+  --c-amber: #f0b44c;
+  --c-red: #ff6b6b;
+  --c-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 4px 12px rgba(0, 0, 0, 0.25);
+  --c-shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --c-shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.6);
+  --c-overlay: rgba(0, 0, 0, 0.6);
+  --c-selected-border: rgba(91, 155, 255, 0.45);
+  --c-presence-working: #f0b44c;
+  --c-call-bg: rgba(60, 207, 127, 0.14);
+  --c-missed-bg: rgba(255, 107, 107, 0.14);
+  --c-column: #171a20;
+  --c-card-hover-border: #3d434e;
+  --c-title-glow: #1f2430;
+  --c-code-bg: #15181d;
+  --c-add-bg: rgba(46, 160, 67, 0.18);
+  --c-add-fg: #7ee2a0;
+  --c-del-bg: rgba(248, 81, 73, 0.18);
+  --c-del-fg: #ffa198;
+  --c-hunk-bg: rgba(56, 139, 253, 0.15);
+  --c-hunk-fg: #8fb8ff;
+  --c-context-fg: #c3c9d2;
 }
 
 /* One sans-serif everywhere (beats the arcade's pixel fonts), monospace for code. */
@@ -1770,7 +1832,7 @@ body[data-theme="classic"] {
 }
 
 .theme-classic .overlay {
-  background: rgba(16, 24, 40, 0.45);
+  background: var(--c-overlay);
 }
 
 /* Header */
@@ -1821,6 +1883,34 @@ body[data-theme="classic"] {
   gap: 20px;
   padding: 0 16px;
   align-items: flex-start;
+}
+
+.scheme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  margin-left: auto;
+  padding: 0;
+  background: var(--c-subtle);
+  color: var(--c-text);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+button.scheme-toggle:hover:not(:disabled) {
+  background: var(--c-accent-soft);
+  color: var(--c-accent);
+}
+
+.theme-classic.scheme-dark .avatar {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+
+.theme-classic .scheme-toggle + .mode-switch {
+  margin-left: 8px;
 }
 
 /* Avatars (initials or image) */
@@ -1906,7 +1996,7 @@ body[data-theme="classic"] {
 
 .contact.selected {
   background: var(--c-accent-soft);
-  border-color: #c9dbf6;
+  border-color: var(--c-selected-border);
 }
 
 .contact-face {
@@ -1926,7 +2016,7 @@ body[data-theme="classic"] {
 }
 
 .presence.working {
-  background: #e6a700;
+  background: var(--c-presence-working);
 }
 
 .presence.on_call,
@@ -1989,18 +2079,18 @@ body[data-theme="classic"] {
 }
 
 .pill.missed {
-  background: #fdecec;
+  background: var(--c-missed-bg);
   color: var(--c-red);
 }
 
 button.pill.result {
   background: var(--c-accent);
-  color: #fff;
+  color: var(--c-on-accent);
   cursor: pointer;
 }
 
 button.pill.result:hover:not(:disabled) {
-  background: #174e9f;
+  background: var(--c-accent-hover);
 }
 
 .contact-call {
@@ -2010,7 +2100,7 @@ button.pill.result:hover:not(:disabled) {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: #e8f6ee;
+  background: var(--c-call-bg);
   color: var(--c-green);
   opacity: 0.45;
   transition: opacity 0.15s ease;
@@ -2168,7 +2258,7 @@ button.pill.result:hover:not(:disabled) {
   border: 1px solid var(--c-border);
   border-left: 4px solid var(--c-accent);
   border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.14);
+  box-shadow: var(--c-shadow-pop);
   animation: classic-toast-in 0.25s ease-out;
 }
 
@@ -2213,7 +2303,7 @@ button.pill.result:hover:not(:disabled) {
   color: var(--c-text);
   border: 1px solid var(--c-border);
   border-radius: 14px;
-  box-shadow: 0 24px 64px rgba(16, 24, 40, 0.25);
+  box-shadow: var(--c-shadow-modal);
 }
 
 .theme-classic .whiteboard .muted {
@@ -2249,7 +2339,7 @@ button.pill.result:hover:not(:disabled) {
 
 .theme-classic .wb-col {
   padding: 10px;
-  background: #eceef2;
+  background: var(--c-column);
   border-radius: 10px;
 }
 
@@ -2292,7 +2382,7 @@ button.pill.result:hover:not(:disabled) {
 
 .theme-classic .wb-card:hover:not(:disabled) {
   background: var(--c-surface);
-  border-color: #cfd5dd;
+  border-color: var(--c-card-hover-border);
   box-shadow: 0 2px 8px rgba(16, 24, 40, 0.1);
 }
 
@@ -2332,7 +2422,7 @@ button.pill.result:hover:not(:disabled) {
   background: var(--c-surface);
   border: 1px solid var(--c-border);
   border-radius: 14px;
-  box-shadow: 0 24px 64px rgba(16, 24, 40, 0.25);
+  box-shadow: var(--c-shadow-modal);
 }
 
 .theme-classic .crt-screen {
@@ -2379,14 +2469,14 @@ button.pill.result:hover:not(:disabled) {
 .theme-classic .artifact-button {
   padding: 8px 14px;
   background: var(--c-accent);
-  color: #fff;
+  color: var(--c-on-accent);
   border-radius: 8px;
   font-size: 14px;
 }
 
 .theme-classic .crt .diff {
   padding: 10px 0;
-  background: #f6f8fa;
+  background: var(--c-code-bg);
   border: 1px solid var(--c-border);
   border-radius: 8px;
   font-size: 12.5px;
@@ -2398,18 +2488,18 @@ button.pill.result:hover:not(:disabled) {
 }
 
 .theme-classic .diff .add {
-  background: #e6ffec;
-  color: #116329;
+  background: var(--c-add-bg);
+  color: var(--c-add-fg);
 }
 
 .theme-classic .diff .del {
-  background: #ffebe9;
-  color: #82071e;
+  background: var(--c-del-bg);
+  color: var(--c-del-fg);
 }
 
 .theme-classic .diff .hunk {
-  background: #ddf4ff;
-  color: #0550ae;
+  background: var(--c-hunk-bg);
+  color: var(--c-hunk-fg);
 }
 
 .theme-classic .diff .meta {
@@ -2417,12 +2507,12 @@ button.pill.result:hover:not(:disabled) {
 }
 
 .theme-classic .diff .context {
-  color: #424a53;
+  color: var(--c-context-fg);
 }
 
 /* Title card (it previews whichever mode is picked) */
 .theme-classic .titlecard {
-  background: radial-gradient(ellipse at top, #ffffff 0%, var(--c-bg) 70%);
+  background: radial-gradient(ellipse at top, var(--c-title-glow) 0%, var(--c-bg) 70%);
 }
 
 .theme-classic .titlecard::after {
