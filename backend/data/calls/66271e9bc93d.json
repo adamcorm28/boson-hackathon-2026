@@ -1,0 +1,15 @@
+{
+  "call_id": "66271e9bc93d",
+  "role": "engineer",
+  "role_name": "Dwight Schrute",
+  "started_at": 1792822256.3203158,
+  "ended_at": 1792822291.485051,
+  "transcript": [
+    [
+      "engineer",
+      "Hello. Dwight Schrute, Engineer. I'm currently addressing the Infinity checkout bulk discount logic issue. It's in progress."
+    ]
+  ],
+  "touched_task_ids": [],
+  "summary": "engineer: Hello. Dwight Schrute, Engineer. I'm currently addressing the Infinity checkout bulk discount logic issue. It's in progress."
+}

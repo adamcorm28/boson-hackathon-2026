@@ -1,0 +1,43 @@
+{
+  "call_id": "db3c5e5c4df2",
+  "role": "ceo",
+  "role_name": "Michael Scott",
+  "started_at": 1792816980.5861702,
+  "ended_at": 1792816992.533188,
+  "transcript": [
+    [
+      "ceo",
+      "Hello! Michael Scott, World's Best Boss. Talk to me."
+    ],
+    [
+      "user",
+      "Hello."
+    ],
+    [
+      "ceo",
+      "Michael Scott, World's Best Boss. Talk to me."
+    ],
+    [
+      "user",
+      "Michael's."
+    ],
+    [
+      "ceo",
+      "Michael Scott, World's Best Boss. Talk to me."
+    ],
+    [
+      "user",
+      "Michael's yeah, it's thinks we're saying all these things."
+    ],
+    [
+      "ceo",
+      "Michael Scott, World's Best Boss. Talk to me."
+    ],
+    [
+      "user",
+      "Do you want to? Do you have AirPods or something?"
+    ]
+  ],
+  "touched_task_ids": [],
+  "summary": "ceo: Michael Scott, World's Best Boss. Talk to me. / user: Michael's. / ceo: Michael Scott, World's Best Boss. Talk to me. / user: Michael's yeah, it's thinks we're saying all these things. / ceo: Michael Scott, World's Best Boss. Talk to me. / user: Do you want to? Do you have AirPods or something?"
+}

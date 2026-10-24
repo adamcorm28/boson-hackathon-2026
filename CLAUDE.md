@@ -39,7 +39,7 @@ cp .env.example .env            # then set BOSON_API_KEY (and ANTHROPIC_API_KEY,
   - It builds instructions from `backend/roles/<role>.yaml` plus a live briefing, and runs tool calls against the company layer.
   - It injects completed-task results only in quiet gaps. It also nudges the model when it claims to delegate or look something up without calling the tool.
   - It also serves `/roles`, `/board`, `/tasks/{id}`, the `/events` SSE stream, and `/artifacts/*`. With the mock company, `POST /dev/complete/{task_id}` fakes a finished task.
-  - Per-machine voices (e.g. teammates' clones) go in the gitignored `backend/data/voice_overrides.yaml` (`role_id: voice_<id>`), not in the role files.
+  - Per-machine voices (e.g. teammates' clones) go in `backend/data/voice_overrides.yaml` (`role_id: voice_<id>`), not in the role files.
   - Rehearse without Paperclip or the frontend: `backend/dev/README.md` (`talk.py` to call an agent with your mic, `scenario.py` for the automated storyline check, `SIMULATE_WORK_SECONDS` for fake work bodies).
 - **Company layer (`backend/company/`):**
   - `types.py` is **shared contract 1**. Don't change a signature without coordinating with the gateway owner.

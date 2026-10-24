@@ -1,0 +1,47 @@
+{
+  "call_id": "2eb0c6087b31",
+  "role": "ceo",
+  "role_name": "Michael Scott",
+  "started_at": 1792826801.172868,
+  "ended_at": 1792826823.6049988,
+  "transcript": [
+    [
+      "ceo",
+      "Michael Scott, World's Best Boss."
+    ],
+    [
+      "user",
+      "Like, like I said, like when I when I texted you, it's like I can make one."
+    ],
+    [
+      "user",
+      "Like, like I said, like when I when I texted you, it's like I can make one. To make a good one, it's gonna be. What?"
+    ],
+    [
+      "ceo",
+      "Michael Scott, World's Best Boss. Talk to me. What can I do for you today?"
+    ],
+    [
+      "user",
+      "It's better than."
+    ],
+    [
+      "ceo",
+      "I'm glad you think so."
+    ],
+    [
+      "user",
+      "Yeah, you just have to change the."
+    ],
+    [
+      "user",
+      "Yeah, you just have to change the. Is the input photo wrong?"
+    ],
+    [
+      "ceo",
+      "I'm not sure what you mean by 'input photo' or what needs changing."
+    ]
+  ],
+  "touched_task_ids": [],
+  "summary": "ceo: Michael Scott, World's Best Boss. Talk to me. What can I do for you today? / user: It's better than. / ceo: I'm glad you think so. / user: Yeah, you just have to change the. / user: Yeah, you just have to change the. Is the input photo wrong? / ceo: I'm not sure what you mean by 'input photo' or what needs changing."
+}

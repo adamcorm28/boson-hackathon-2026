@@ -1,0 +1,49 @@
+{
+  "call_id": "1c153690af66",
+  "role": "engineer",
+  "role_name": "Dwight Schrute",
+  "started_at": 1792822020.747222,
+  "ended_at": 1792822081.566035,
+  "transcript": [
+    [
+      "engineer",
+      "Dwight Schrute, Engineer. I'm currently investigating the Infinity layout issue on tablets, task DM-109. What can I help you with?"
+    ],
+    [
+      "user",
+      "Cool. How's it going with DM one o nine?"
+    ],
+    [
+      "engineer",
+      "It's in the backlog. The product grid overflows on tablet widths. I'm ready to start the fix."
+    ],
+    [
+      "user",
+      "Can you actually tell me about DM 209?"
+    ],
+    [
+      "engineer",
+      "I can't find task DM-209 on the board. It might be under a different ID or not yet logged."
+    ],
+    [
+      "user",
+      "Okay, that's fine. Go back to one hundred nine."
+    ],
+    [
+      "engineer",
+      "Understood. I'm starting the fix for the Infinity layout on tablets. I'll investigate the root cause of the overflow and implement a responsive solution."
+    ],
+    [
+      "user",
+      "Okay. Let me know when you're done. That."
+    ],
+    [
+      "engineer",
+      "I'm starting the fix for the Infinity layout on tablets right now. I'll investigate the root cause of the overflow and implement a responsive solution."
+    ]
+  ],
+  "touched_task_ids": [
+    "DM-109"
+  ],
+  "summary": "user: Can you actually tell me about DM 209? / engineer: I can't find task DM-209 on the board. It might be under a different ID or not yet logged. / user: Okay, that's fine. Go back to one hundred nine. / engineer: Understood. I'm starting the fix for the Infinity layout on tablets. I'll investigate the root cause of the overflow and implement a responsive solution. / user: Okay. Let me know when you're done. That. / engineer: I'm starting the fix for the Infinity layout on tablets right now. I'll investigate the root cause of the overflow and implement a responsive solution."
+}
