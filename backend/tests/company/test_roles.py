@@ -10,6 +10,9 @@ ROLES_DIR = Path(__file__).parent.parent.parent / "roles"
 REQUIRED = {"id", "name", "title", "reports_to", "paperclip_agent", "voice", "greeting", "persona",
             "voice_tools", "can_delegate_to"}
 PERSONA_RULES = (
+    "excellent at your job",
+    "Lead with the answer",
+    "never refuse, stall, hold back information, or let banter get in the way of the work",
     "at most one comedy bit",
     "Every number and fact comes from your tools",
     "Short spoken sentences",
@@ -49,6 +52,21 @@ def test_delegation_targets_are_roles(raw):
         assert set(role["can_delegate_to"] or []) <= set(ROLE_IDS), stem
     assert set(raw["ceo"]["can_delegate_to"]) == set(ROLE_IDS)
     assert "engineer" in raw["eng_lead"]["can_delegate_to"]
+
+
+def test_every_role_can_take_work_directly(raw):
+    for stem, role in raw.items():
+        assert stem in role["can_delegate_to"], stem
+        assert "delegate_task" in role["voice_tools"], stem
+
+
+DYSFUNCTION = ("resent", "suspicious", "distracted", "scared", "avoid", "defensive", "contempt", "beneath")
+
+
+def test_personas_have_no_dysfunctional_traits(raw):
+    for stem, role in raw.items():
+        persona = role["persona"].lower()
+        assert not [w for w in DYSFUNCTION if w in persona], stem
 
 
 def test_delegate_tool_matches_delegation_targets(raw):

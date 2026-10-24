@@ -59,5 +59,5 @@ Paperclip runs locally at `:3100`: `npx paperclipai@latest onboard --yes` (needs
 ## Project rules
 
 - **Likeness:** characters from *The Office* are text personas only. Never clone the actors' voices or use their photos. Voices are Boson presets for now (Michael `marcus`, Dwight `jake`, Jim `oliver`, Ryan `default`); teammates' own cloned voices are a stretch goal. Faces are original pixel art.
-- **Personas:** at most one comedy bit per reply, and every number comes from tools.
+- **Personas:** this simulates a well-run company; the Office is only a fun layer. Every character is excellent and cooperative, leads with the answer, never refuses, stalls or lets banter affect the work; at most one comedy bit per reply, and every number comes from tools.
 - **Commits and PRs:** no Claude or AI attribution. No `Co-Authored-By: Claude`, no "Generated with Claude Code".
