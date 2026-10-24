@@ -52,17 +52,18 @@ async def on_update(issue: Issue) -> None:
 
 
 async def on_complete(result: TaskResult) -> None:
-    bus.publish("task.completed", {
-        "task_id": result.task_id, "from_role": result.from_role,
-        "title": result.title, "summary": result.summary,
-    })
+    completed = {"task_id": result.task_id, "from_role": result.from_role,
+                 "title": result.title, "summary": result.summary}
+    if result.failed:
+        completed["failed"] = True  # only on failures, so the success payload stays as in spec §7a
+    bus.publish("task.completed", completed)
     # The active call announces it in a quiet gap (and pings then); otherwise the
     # next call's briefing delivers it and the frontend rings the sender's phone.
     queue.push(result)
     if active_call is None:
         bus.publish("ping", {
             "to_role": None, "from_role": result.from_role, "task_id": result.task_id,
-            "text": f"{_name(result.from_role)}: {result.title} is done",
+            "text": f"{_name(result.from_role)}: {result.title} " + ("couldn't finish" if result.failed else "is done"),
         })
 
 

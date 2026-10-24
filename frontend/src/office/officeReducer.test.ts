@@ -22,6 +22,12 @@ const ping = (to_role: string | null, from_role = "engineer"): ServerEvent => ({
 });
 
 describe("officeReducer", () => {
+  it('failed completion toasts "couldn\'t finish" instead of "is done!"', () => {
+    const s = run({ ...completed(), failed: true } as ServerEvent);
+    expect(s.toasts[0].text).toBe("DWIGHT: Fix bulk discount couldn't finish");
+    expect(s.bang).toEqual({ engineer: ["DM-111"] });
+  });
+
   it('completed adds bang and toast text "DWIGHT: Fix bulk discount is done!"', () => {
     const s = run(completed());
     expect(s.bang).toEqual({ engineer: ["DM-111"] });

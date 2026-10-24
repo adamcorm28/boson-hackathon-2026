@@ -38,6 +38,7 @@ class FakePaperclip:
             {"authorType": "agent", "authorAgentId": "ag-dwight", "body": "x" * 400, "createdAt": "t2"},
         ]}
         self.posted: list[tuple[str, dict]] = []
+        self.runs: dict[str, list[dict]] = {}
 
     def find(self, key):
         return next((i for i in self.issues if key in (i["id"], i["identifier"])), None)
@@ -55,6 +56,9 @@ class FakePaperclip:
             new["description"] = body["description"]
             self.issues.append(new)
             return httpx.Response(201, json=new)
+        if m := re.fullmatch(r"/api/issues/([^/]+)/runs", path):
+            found = self.find(m.group(1))
+            return httpx.Response(200, json=self.runs.get(found["id"], [])) if found else httpx.Response(404, json={})
         if m := re.fullmatch(r"/api/issues/([^/]+)(/comments)?", path):
             found = self.find(m.group(1))
             if found is None:
@@ -258,3 +262,30 @@ def test_get_company_selects_paperclip(tmp_path, monkeypatch):
     monkeypatch.setattr("company.paperclip.DEFAULT_IDS_PATH", tmp_path / "ids.json")
     (tmp_path / "ids.json").write_text(json.dumps(IDS))
     assert isinstance(company.get_company(), PaperclipCompany)
+
+
+def run(status, error_code=None, retry_at=None, started="2026-10-24T05:00:00Z"):
+    return {"runId": f"run-{status}", "status": status, "errorCode": error_code, "error": None,
+            "scheduledRetryAt": retry_at, "startedAt": started}
+
+
+async def test_get_issue_reports_failed_latest_run(pc, fake):
+    fake.runs["is-11"] = [run("failed", "acpx_turn_failed", started="2026-10-24T05:10:00Z"),
+                          run("succeeded", started="2026-10-24T05:00:00Z")]
+    assert (await pc.get_issue("DUNA-11")).failed_reason == "acpx_turn_failed"
+
+
+async def test_failed_run_with_pending_retry_is_not_failed(pc, fake):
+    fake.runs["is-11"] = [run("failed", "acpx_turn_failed", retry_at="2026-10-24T05:15:00Z")]
+    assert (await pc.get_issue("DUNA-11")).failed_reason is None
+
+
+async def test_later_successful_run_clears_failure(pc, fake):
+    fake.runs["is-11"] = [run("failed", "acpx_turn_failed", started="2026-10-24T05:00:00Z"),
+                          run("running", started="2026-10-24T05:10:00Z")]
+    assert (await pc.get_issue("DUNA-11")).failed_reason is None
+
+
+async def test_seed_issue_runs_not_checked(pc, fake):
+    fake.runs["is-1"] = [run("failed", "acpx_turn_failed")]
+    assert (await pc.get_issue("DM-101")).failed_reason is None

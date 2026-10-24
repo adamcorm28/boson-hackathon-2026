@@ -142,3 +142,26 @@ def test_user_message_mode_prefix(roles):
     assert text.startswith(NOTIFICATION_PREFIX) and NOTIFICATION_PREFIX == "[notification from system, not the user]"
     assert "Dwight" in text and "Fixed it; tests pass." in text
     assert "DM-200" not in text
+
+
+def failed_result(from_role="cfo", requested_by="cfo"):
+    return TaskResult("DM-201", "Lackawanna model", from_role, requested_by,
+                      "The work on this couldn't finish: the agent's run failed (acpx_turn_failed).", [], failed=True)
+
+
+def test_failed_own_task_guidance_says_it_couldnt_finish(roles):
+    evs = injection_events(failed_result(), roles["cfo"], roles, "function_call")
+    guidance = json.loads(evs[1]["item"]["output"])["how_to_mention_it"]
+    assert "couldn't finish" in guidance and "ready" not in guidance
+
+
+def test_failed_cross_team_guidance_names_sender(roles):
+    evs = injection_events(failed_result("engineer", "eng_lead"), roles["sales_lead"], roles, "function_call")
+    guidance = json.loads(evs[1]["item"]["output"])["how_to_mention_it"]
+    assert "Dwight" in guidance and "couldn't finish" in guidance and "is done" not in guidance
+
+
+def test_failed_user_message_does_not_say_finished(roles):
+    evs = injection_events(failed_result(), roles["sales_lead"], roles, "user_message")
+    text = evs[0]["item"]["content"][0]["text"]
+    assert "couldn't finish" in text and 'finished "' not in text

@@ -76,7 +76,8 @@ export const SSE_EVENT_TYPES = ["agent.status", "task.updated", "task.completed"
 export type ServerEvent =
   | { type: "agent.status"; role: string; state: AgentState }
   | { type: "task.updated"; task_id: string; status: Status; assignee_role: string | null; title: string }
-  | { type: "task.completed"; task_id: string; from_role: string; title: string; summary: string }
+  /** failed: the agent's run failed, so there's no result (only present on failures). */
+  | { type: "task.completed"; task_id: string; from_role: string; title: string; summary: string; failed?: boolean }
   /** to_role = the active call's role when injected into a call; null when no call was active. */
   | { type: "ping"; to_role: string | null; from_role: string; task_id: string; text: string }
   /** Client-only: emitted after the SSE stream reconnects. Refetch /board and /roles. */

@@ -92,11 +92,16 @@ def _team(role: Role | None) -> str:
 
 
 def announcement_guidance(result: TaskResult, active_role: Role, roles: dict[str, Role]) -> str:
-    if active_role.id in (result.requested_by_role, result.from_role):
-        return ("Briefly tell the user this is ready and ask if they want to go through it now. "
-                "One or two short spoken sentences; don't read out IDs or links.")
     sender = roles.get(result.from_role)
     name = sender.name.split()[0] if sender else result.from_role
+    own = active_role.id in (result.requested_by_role, result.from_role)
+    if result.failed:
+        who = "your" if own else f"{name}'s"
+        return (f"Briefly tell the user that {who} work on {result.title} couldn't finish because the run hit an error, "
+                "and offer to try it again. One or two short spoken sentences; don't read out IDs or error codes.")
+    if own:
+        return ("Briefly tell the user this is ready and ask if they want to go through it now. "
+                "One or two short spoken sentences; don't read out IDs or links.")
     return (f"Mention naturally that {name} from {_team(sender)} just pinged that {result.title} is done; "
             f"offer to keep going or suggest they call {name}. One or two short spoken sentences.")
 
@@ -123,7 +128,8 @@ def injection_events(
              "item": {"type": "function_call_output", "call_id": call_id, "output": json.dumps(payload)}},
             {"type": "response.create"},
         ]
-    text = (f"{NOTIFICATION_PREFIX} {from_name} finished \"{result.title}\". "
+    outcome = "couldn't finish" if result.failed else "finished"
+    text = (f"{NOTIFICATION_PREFIX} {from_name} {outcome} \"{result.title}\". "
             f"Summary: {result.summary} How to mention it: {guidance}")
     return [
         {"type": "conversation.item.create",

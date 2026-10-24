@@ -53,3 +53,10 @@ def test_get_company_defaults_to_mock(monkeypatch):
     monkeypatch.delenv("COMPANY_BACKEND", raising=False)
     monkeypatch.setattr(company, "_instance", None)
     assert isinstance(company.get_company(), MockCompany)
+
+
+async def test_fail_hook_sets_failed_reason(c):
+    tid = await c.create_task("cfo", "Model", "brief", "ceo")
+    c.fail(tid, "acpx_turn_failed")
+    assert (await c.get_issue(tid)).failed_reason == "acpx_turn_failed"
+    assert (await c.get_issue("DM-101")).failed_reason is None

@@ -44,6 +44,7 @@ class Issue:
     description: str
     comments: list[Comment] = field(default_factory=list)
     updated_at: str = ""
+    failed_reason: str | None = None  # set when the assignee's latest run failed with no retry pending
 
 
 @dataclass
@@ -54,6 +55,7 @@ class TaskResult:
     requested_by_role: str | None
     summary: str
     artifacts: list[Artifact] = field(default_factory=list)
+    failed: bool = False  # True: the agent's run failed; summary says so instead of reporting a result
 
 
 @dataclass
