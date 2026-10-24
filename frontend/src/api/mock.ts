@@ -68,6 +68,7 @@ const BYTES_PER_SECOND = 24_000 * 2; // PCM16 mono 24 kHz
 const TRIGGER_BYTES = 2 * BYTES_PER_SECOND; // ~2 s of mic audio after the greeting
 const CHUNK_BYTES = BYTES_PER_SECOND / 10; // 100 ms frames, sent every 50 ms (2x real time, like a real server)
 const BARGE_IN_RMS = 0.05; // normal speech on a real mic with auto-gain
+const QUIET_BYTES = 0.6 * BYTES_PER_SECOND; // pause that counts as "done talking"
 
 export interface MockOptions {
   /** Speeds up every timer, e.g. 10 = ten times faster. */
@@ -167,6 +168,7 @@ export function createMockGateway(opts: MockOptions = {}): MockGateway {
     let speaking = false;
     let listening = false; // true once the greeting has finished or been interrupted
     let heard = 0;
+    let quiet = 0; // bytes of quiet mic audio in a row
 
     const callLater = (ms: number, fn: () => void) => {
       const id = later(ms, () => {
@@ -259,7 +261,8 @@ export function createMockGateway(opts: MockOptions = {}): MockGateway {
     return {
       sendAudio(pcm) {
         if (!open) return;
-        if (speaking && rms(pcm) > BARGE_IN_RMS) {
+        const loud = rms(pcm) > BARGE_IN_RMS;
+        if (speaking && loud) {
           // Real order: speech_started -> barge_in, then the cancelled response ends -> speaking false.
           send({ type: "barge_in" });
           stopSpeaking();
@@ -268,7 +271,9 @@ export function createMockGateway(opts: MockOptions = {}): MockGateway {
         }
         if (!listening || delegated) return;
         heard += pcm.byteLength;
-        if (heard < TRIGGER_BYTES) return;
+        quiet = loud ? 0 : quiet + pcm.byteLength;
+        // Like server VAD: reply once they've talked ~2 s and then paused.
+        if (heard < TRIGGER_BYTES || quiet < QUIET_BYTES) return;
         send({ type: "transcript.user", text: SCRIPT.userAsk });
         send({
           type: "tool.called",

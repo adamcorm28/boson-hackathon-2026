@@ -1,33 +1,14 @@
-// Temporary test panel for the gateway (mock or real). Plays the agent's audio; "Mic on" streams
-// your real mic. "Talk 2 s" sends silent fake mic audio, "Interrupt" sends one loud frame.
-import { useEffect, useRef, useState } from "react";
+// Temporary test panel for the gateway (mock or real), until the office (C5) exists.
+// Calls go through useCall + CallWindow, so the mic turns on automatically and Esc hangs up.
+import { useEffect, useState } from "react";
 import { gateway, GATEWAY_URL, USE_MOCK } from "../api";
 import type { MockGateway } from "../api/mock";
-import { MicBlockedError, startMic, type Mic } from "../audio/mic";
-import { createPlayer, type Player } from "../audio/player";
-import {
-  BOARD_COLUMNS,
-  CLOSE_ALREADY_ON_CALL,
-  type AgentState,
-  type Board,
-  type CallEvent,
-  type CallSocket,
-  type Role,
-  type TaskDetail,
-} from "../api/types";
+import { BOARD_COLUMNS, CLOSE_ALREADY_ON_CALL, type AgentState, type Board, type Role, type TaskDetail } from "../api/types";
+import { CallWindow } from "../call/CallWindow";
+import { useCall } from "../call/useCall";
 
 const mock = USE_MOCK ? (gateway as MockGateway) : null;
 const FRAME_BYTES = 1920; // 40 ms of PCM16 24 kHz
-
-interface CallView {
-  roleId: string;
-  name: string;
-  status: string;
-  lines: string[];
-  partial: string;
-  speaking: boolean;
-  audioBytes: number;
-}
 
 interface LogLine {
   id: number;
@@ -45,15 +26,16 @@ export function DevPanel() {
   const [log, setLog] = useState<LogLine[]>([]);
   const [completed, setCompleted] = useState<string[]>([]);
   const [result, setResult] = useState<{ task: TaskDetail; diff: string | null } | null>(null);
-  const [call, setCall] = useState<CallView | null>(null);
-  const [micOn, setMicOn] = useState(false);
-  const [micError, setMicError] = useState<string | null>(null);
-  const callRef = useRef<CallSocket | null>(null);
-  const audioRef = useRef<{ ctx: AudioContext; player: Player } | null>(null);
-  const micRef = useRef<Mic | null>(null);
 
   const addLog = (text: string) =>
     setLog((prev) => [{ id: logId++, at: new Date().toLocaleTimeString(), text }, ...prev].slice(0, 40));
+
+  const call = useCall(gateway, {
+    onEvent: (e) => {
+      if (e.type !== "transcript.assistant.delta") addLog(`CALL ${JSON.stringify(e)}`);
+    },
+  });
+  const live = call.state.status === "live";
 
   useEffect(() => {
     const loadRoles = () => gateway.fetchRoles().then(setRoles, (e: unknown) => setError(String(e)));
@@ -72,94 +54,17 @@ export function DevPanel() {
     });
   }, []);
 
-  function dial(role: Role) {
+  /** Opens a raw second socket to check the one-call-at-a-time rule without touching the current call. */
+  function secondCall(role: Role) {
     const sock = gateway.openCall(role.id);
-    if (callRef.current) {
-      // Lets you check the one-call-at-a-time rule without losing the current call.
-      sock.onClose((code) =>
-        addLog(`second call to ${role.id} closed with ${code}${code === CLOSE_ALREADY_ON_CALL ? ' -> "Already on a call"' : ""}`),
-      );
-      return;
-    }
-    callRef.current = sock;
-    // Created inside the click handler so the browser lets it play.
-    const ctx = new AudioContext();
-    const player = createPlayer(ctx);
-    audioRef.current = { ctx, player };
-    setMicError(null);
-    const name = role.name.split(" ")[0];
-    setCall({ roleId: role.id, name, status: "connecting", lines: [], partial: "", speaking: false, audioBytes: 0 });
-
-    const update = (fn: (c: CallView) => CallView) => setCall((c) => (c ? fn(c) : c));
-    sock.onEvent((e: CallEvent) => {
-      if (e.type !== "transcript.assistant.delta") addLog(`CALL ${JSON.stringify(e)}`);
-      switch (e.type) {
-        case "call.started":
-          return update((c) => ({ ...c, status: "live" }));
-        case "transcript.assistant.delta":
-          return update((c) => ({ ...c, partial: c.partial + e.text }));
-        case "transcript.assistant.done":
-          return update((c) => ({ ...c, partial: "", lines: [...c.lines, `${name}: ${e.text}`] }));
-        case "transcript.user":
-          return update((c) => ({ ...c, lines: [...c.lines, `You: ${e.text}`] }));
-        case "barge_in":
-          player.stop();
-          return update((c) => ({
-            ...c,
-            partial: "",
-            lines: c.partial ? [...c.lines, `${name}: ${c.partial}… (interrupted)`] : c.lines,
-          }));
-        case "agent.speaking":
-          return update((c) => ({ ...c, speaking: e.value }));
-        case "task.started":
-          return update((c) => ({ ...c, lines: [...c.lines, `[task started: ${e.title} -> ${e.assignee_role}]`] }));
-        case "call.ended":
-          return update((c) => ({ ...c, lines: [...c.lines, `[call ended by server: ${e.reason}]`] }));
-        default:
-          return;
-      }
-    });
-    sock.onAudio((pcm) => {
-      player.enqueue(pcm);
-      update((c) => ({ ...c, audioBytes: c.audioBytes + pcm.byteLength }));
-    });
-    sock.onClose((code) => {
-      if (callRef.current === sock) callRef.current = null;
-      stopMic();
-      player.stop();
-      void ctx.close();
-      audioRef.current = null;
-      addLog(`CALL closed with code ${code}`);
-      update((c) => ({ ...c, status: `closed (${code})`, speaking: false }));
-    });
-  }
-
-  function stopMic() {
-    micRef.current?.stop();
-    micRef.current = null;
-    setMicOn(false);
-  }
-
-  function toggleMic() {
-    if (micRef.current) return stopMic();
-    startMic((frame) => callRef.current?.sendAudio(frame)).then(
-      (mic) => {
-        if (!callRef.current) return mic.stop(); // the call ended while we waited for permission
-        micRef.current = mic;
-        setMicOn(true);
-        setMicError(null);
-      },
-      (err: unknown) => setMicError(err instanceof MicBlockedError ? err.message : `Mic error: ${String(err)}`),
+    sock.onClose((code) =>
+      addLog(`second call to ${role.id} closed with ${code}${code === CLOSE_ALREADY_ON_CALL ? ' -> "Already on a call"' : ""}`),
     );
   }
 
   function talk(seconds: number) {
     const frames = Math.round((seconds * 1000) / 40);
-    for (let i = 0; i < frames; i++) callRef.current?.sendAudio(new ArrayBuffer(FRAME_BYTES));
-  }
-
-  function interrupt() {
-    callRef.current?.sendAudio(new Int16Array(FRAME_BYTES / 2).fill(12000).buffer);
+    for (let i = 0; i < frames; i++) call.sendAudio(new ArrayBuffer(FRAME_BYTES));
   }
 
   async function openResult(taskId: string) {
@@ -173,8 +78,6 @@ export function DevPanel() {
     }
   }
 
-  const live = call !== null && !call.status.startsWith("closed");
-
   return (
     <main className="dev">
       <h1>Dunder Mifflin Infinity Voice™: gateway test panel</h1>
@@ -183,13 +86,13 @@ export function DevPanel() {
       </p>
       {USE_MOCK && (
         <ol className="muted steps">
-          <li>Click Call next to anyone and wait for the greeting (you should hear it).</li>
+          <li>Click Call next to anyone and allow the mic. You should hear the greeting.</li>
           <li>
-            Click "Mic on" and speak for ~2 s (or click "Talk 2 s"): they delegate "Fix bulk discount" to Dwight and a
-            card appears in todo. Speak up while they talk to interrupt: the audio should cut out at once.
+            Say a short sentence, then pause: they delegate "Fix bulk discount" to Dwight and a card appears in todo.
+            (No mic? Click "Talk 2 s".) Speak while they talk to interrupt: the audio should cut out at once.
           </li>
-          <li>Watch it move to in_progress, then done ~10 s later, with a ping in the log.</li>
-          <li>Click "Open result" to see the summary and diff.</li>
+          <li>Watch the card move to in_progress, then done ~10 s later, with a ping and an announcement.</li>
+          <li>Click "Open result" to see the summary and diff. Esc hangs up.</li>
         </ol>
       )}
       {error && <p className="error">Can't reach the gateway: {error}</p>}
@@ -200,7 +103,14 @@ export function DevPanel() {
           <ul className="plain">
             {roles.map((r) => (
               <li key={r.id}>
-                <button onClick={() => dial(r)}>Call</button> {r.name} <span className="muted">({r.id})</span>{" "}
+                {call.state.status === "idle" ? (
+                  <button onClick={() => call.dial(r.id)}>Call</button>
+                ) : (
+                  <button onClick={() => secondCall(r)} title="Should be rejected with 4409">
+                    2nd call
+                  </button>
+                )}{" "}
+                {r.name} <span className="muted">({r.id})</span>{" "}
                 <span className={`badge ${agents[r.id] ?? "idle"}`}>{agents[r.id] ?? "idle"}</span>
               </li>
             ))}
@@ -213,36 +123,19 @@ export function DevPanel() {
         </section>
 
         <section className="dev-card grow">
-          <h2>Call {call && `with ${call.name}: ${call.status}`}</h2>
-          {call ? (
-            <>
-              <p className="muted">
-                {call.speaking ? "🔊 speaking" : "· silent"} · audio received: {(call.audioBytes / 48000).toFixed(1)} s
-              </p>
-              <div className="transcript">
-                {call.lines.map((l, i) => (
-                  <div key={i}>{l}</div>
-                ))}
-                {call.partial && <div className="muted">{call.name}: {call.partial}</div>}
-              </div>
-              {micError && <p className="error">{micError}</p>}
-              <p>
-                <button disabled={!live} onClick={toggleMic}>
-                  {micOn ? "🎤 Mic off" : "Mic on"}
-                </button>{" "}
-                <button disabled={!live} onClick={() => talk(2)}>Talk 2 s</button>{" "}
-                <button disabled={!live} onClick={interrupt}>Interrupt</button>{" "}
-                <button disabled={!live} onClick={() => callRef.current?.hangup()}>Hang up</button>{" "}
-                {mock && (
-                  <button disabled={!live} onClick={() => mock.endActiveCall("idle_timeout")}>
-                    End from server
-                  </button>
-                )}
-              </p>
-            </>
-          ) : (
-            <p className="muted">Not on a call.</p>
-          )}
+          <h2>Call test controls</h2>
+          <p>
+            <button disabled={!live} onClick={() => talk(2)}>Talk 2 s (silent)</button>{" "}
+            <button disabled={!live} onClick={() => call.sendAudio(new Int16Array(FRAME_BYTES / 2).fill(12000).buffer)}>
+              Interrupt (loud frame)
+            </button>{" "}
+            {mock && (
+              <button disabled={!live} onClick={() => mock.endActiveCall("idle_timeout")}>
+                End from server
+              </button>
+            )}
+          </p>
+          <p className="muted">Call status: {call.state.status}{call.talking ? " · agent talking" : ""}</p>
         </section>
       </div>
 
@@ -301,6 +194,14 @@ export function DevPanel() {
           </div>
         </section>
       </div>
+
+      <CallWindow
+        state={call.state}
+        roles={roles}
+        talking={call.talking}
+        onHangup={call.hangup}
+        onRetryMic={call.retryMic}
+      />
     </main>
   );
 }

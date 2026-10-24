@@ -158,6 +158,20 @@ describe("mock gateway", () => {
     expect(ctx.log.filter((l) => l === "call:task.started")).toHaveLength(1);
   });
 
+  it("waits for the user to pause before replying", async () => {
+    const ctx = setup();
+    const { call } = dial(ctx, "eng_lead");
+    await vi.advanceTimersByTimeAsync(GREETING_MS);
+
+    for (let i = 0; i < 75; i++) call.sendAudio(loud40ms()); // 3 s of talking, no pause
+    expect(ctx.log).not.toContain("call:transcript.user");
+
+    for (let i = 0; i < 14; i++) call.sendAudio(silence40ms()); // 0.56 s: not quite a pause
+    expect(ctx.log).not.toContain("call:transcript.user");
+    call.sendAudio(silence40ms()); // 0.6 s
+    expect(ctx.log).toContain("call:transcript.user");
+  });
+
   it("closes a second concurrent call with 4409", async () => {
     const ctx = setup();
     dial(ctx, "ceo");
