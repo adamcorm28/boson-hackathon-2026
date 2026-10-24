@@ -82,6 +82,8 @@ export interface MockOptions {
 export interface MockGateway extends Gateway {
   /** Ends the active call from the "server" side, like an idle timeout: call.ended, then close. */
   endActiveCall(reason: string): void;
+  /** Plays your side of the scripted call without a mic: the hand-off to Dwight. */
+  simulateUserTurn(): void;
   /** Pretends the SSE stream dropped and came back. */
   resync(): void;
 }
@@ -90,6 +92,8 @@ interface ActiveCall {
   roleId: string;
   announce(text: string): void;
   end(reason: string): void;
+  /** The scripted user turn ("Can you get Dwight to fix the bulk discount?"). */
+  userTurn(): void;
 }
 
 export function createMockGateway(opts: MockOptions = {}): MockGateway {
@@ -233,8 +237,22 @@ export function createMockGateway(opts: MockOptions = {}): MockGateway {
       });
     };
 
+    const respondToUser = () => {
+      if (!open || delegated) return;
+      send({ type: "transcript.user", text: SCRIPT.userAsk });
+      send({
+        type: "tool.called",
+        name: "delegate_task",
+        args: { assignee_role: FIX.assignee_role, title: FIX.title, brief: "Bulk discount isn't applied at checkout." },
+      });
+      send({ type: "task.started", ...FIX });
+      delegateFix();
+      speak(SCRIPT.reply);
+    };
+
     const call: ActiveCall = {
       roleId,
+      userTurn: respondToUser,
       announce: (text) => speak(text),
       end: (reason) => {
         send({ type: "call.ended", reason });
@@ -274,15 +292,7 @@ export function createMockGateway(opts: MockOptions = {}): MockGateway {
         quiet = loud ? 0 : quiet + pcm.byteLength;
         // Like server VAD: reply once they've talked ~2 s and then paused.
         if (heard < TRIGGER_BYTES || quiet < QUIET_BYTES) return;
-        send({ type: "transcript.user", text: SCRIPT.userAsk });
-        send({
-          type: "tool.called",
-          name: "delegate_task",
-          args: { assignee_role: FIX.assignee_role, title: FIX.title, brief: "Bulk discount isn't applied at checkout." },
-        });
-        send({ type: "task.started", ...FIX });
-        delegateFix();
-        speak(SCRIPT.reply);
+        respondToUser();
       },
       hangup: () => close(1000),
       onAudio: (cb) => void audioCbs.push(cb),
@@ -314,6 +324,7 @@ export function createMockGateway(opts: MockOptions = {}): MockGateway {
     },
     openCall,
     endActiveCall: (reason) => active?.end(reason),
+    simulateUserTurn: () => active?.userTurn(),
     resync: () => broadcast({ type: "resync" }),
   };
 }

@@ -216,7 +216,10 @@ export function Office({
 
       <div className="keybar">
         <span className="hint">{hint}</span>
-        <span className="muted">←↑↓→/WASD move · E call · Esc hang up · B board · Q office life {quirks ? "on" : "off"}</span>
+        <span className="keys">
+          <kbd>←↑↓→</kbd> move <kbd>E</kbd> call <kbd>Esc</kbd> hang up <kbd>B</kbd> board <kbd>Q</kbd> office life{" "}
+          {quirks ? "on" : "off"}
+        </span>
       </div>
     </div>
   );

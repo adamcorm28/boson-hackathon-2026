@@ -172,6 +172,17 @@ describe("mock gateway", () => {
     expect(ctx.log).toContain("call:transcript.user");
   });
 
+  it("simulateUserTurn runs the hand-off without any mic audio", async () => {
+    const ctx = setup();
+    dial(ctx, "eng_lead");
+    await vi.advanceTimersByTimeAsync(GREETING_MS);
+    ctx.gw.simulateUserTurn();
+    ctx.gw.simulateUserTurn(); // only once
+    await vi.advanceTimersByTimeAsync(SCRIPT_MS);
+    expect(ctx.log.filter((l) => l === "call:task.started")).toHaveLength(1);
+    expect(ctx.log).toContain("sse:task.completed");
+  });
+
   it("closes a second concurrent call with 4409", async () => {
     const ctx = setup();
     dial(ctx, "ceo");

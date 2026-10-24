@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
-import { gateway } from "./api";
+import { gateway, USE_MOCK } from "./api";
 import type { Board, Role } from "./api/types";
 import { boardReducer } from "./board/boardReducer";
 import { Whiteboard } from "./board/Whiteboard";
@@ -10,6 +10,7 @@ import { Hud } from "./office/Hud";
 import { Office } from "./office/Office";
 import { initialOfficeState, officeReducer } from "./office/officeReducer";
 import { ResultViewer } from "./results/ResultViewer";
+import { TitleCard } from "./ui/TitleCard";
 
 const MOVED_HIGHLIGHT_MS = 2500;
 
@@ -25,6 +26,7 @@ function OfficeApp() {
   const [error, setError] = useState<string | null>(null);
   const [boardOpen, setBoardOpen] = useState(false);
   const [resultTaskId, setResultTaskId] = useState<string | null>(null);
+  const [titleOpen, setTitleOpen] = useState(() => !new URLSearchParams(location.search).has("notitle"));
   const [office, officeDispatch] = useReducer(officeReducer, undefined, () => initialOfficeState());
   const call = useCall(gateway);
   const onLine = call.state.status === "connecting" || call.state.status === "live" ? call.state.roleId : null;
@@ -100,7 +102,7 @@ function OfficeApp() {
           onDial={dial}
           onHangup={call.hangup}
           onOpenBoard={() => setBoardOpen(true)}
-          paused={boardOpen || resultTaskId !== null}
+          paused={titleOpen || boardOpen || resultTaskId !== null}
           agents={agents}
           bang={office.bang}
           ringing={office.ringing}
@@ -128,6 +130,8 @@ function OfficeApp() {
       {resultTaskId && (
         <ResultViewer gateway={gateway} roles={roles} taskId={resultTaskId} onClose={() => setResultTaskId(null)} />
       )}
+
+      {titleOpen && <TitleCard mock={USE_MOCK} onStart={() => setTitleOpen(false)} />}
 
       <CallWindow state={call.state} roles={roles} talking={call.talking} onHangup={call.hangup} onRetryMic={call.retryMic} />
     </main>

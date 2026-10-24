@@ -1,7 +1,7 @@
 // Full-screen conference-room whiteboard: six columns, cards colored by their owner,
 // and a highlight on the card that just moved. Click a card to see its result.
 import { BOARD_COLUMNS, type Board, type Role } from "../api/types";
-import { lookFor } from "../art/looks";
+import { accentFor } from "../art/looks";
 import { useOverlayKeys } from "../ui/useOverlayKeys";
 
 const LABELS: Record<string, string> = {
@@ -44,7 +44,7 @@ export function Whiteboard({ board, roles, justMoved, onOpenCard, onClose }: Pro
                   {LABELS[col]} <span className="muted">{board.columns[col].length}</span>
                 </h3>
                 {board.columns[col].map((card) => {
-                  const color = card.assignee_role ? lookFor(card.assignee_role).shirt : "#999";
+                  const color = card.assignee_role ? accentFor(card.assignee_role) : "#999";
                   return (
                     <button
                       key={`${card.task_id}-${col}`}

@@ -8,7 +8,8 @@ export const USE_MOCK = import.meta.env.VITE_MOCK === "1";
 function pickGateway(): Gateway {
   if (!USE_MOCK) return createGateway(GATEWAY_URL);
   const mock = createMockGateway();
-  // Console hooks for manual testing, e.g. __mockGateway.endActiveCall("idle_timeout") or __mockGateway.resync()
+  // Console hooks for manual testing: __mockGateway.simulateUserTurn() (hand-off without a mic),
+  // __mockGateway.endActiveCall("idle_timeout"), __mockGateway.resync()
   Object.assign(window, { __mockGateway: mock });
   return mock;
 }

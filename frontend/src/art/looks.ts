@@ -5,6 +5,8 @@ export interface Look {
   shirt: string;
   tie: string;
   pants: string;
+  /** Color for their cards on the whiteboard (defaults to the shirt). */
+  accent?: string;
   glasses?: boolean;
   bald?: boolean;
 }
@@ -14,7 +16,7 @@ export const LOOKS: Record<string, Look> = {
   cfo: { hair: "#4a3a2c", skin: "#e8b48c", shirt: "#7a8fa8", tie: "#3c4f7a", pants: "#3a3a3a", bald: true },
   eng_lead: { hair: "#15110e", skin: "#d9a57a", shirt: "#1c1c22", tie: "#1c1c22", pants: "#2a2a30" }, // black shirt
   engineer: { hair: "#5a3e22", skin: "#f2cfa8", shirt: "#c9a33b", tie: "#5a3e22", pants: "#4a3a28", glasses: true }, // mustard
-  sales_lead: { hair: "#6b4a2e", skin: "#f2cba4", shirt: "#dce6f2", tie: "#48607c", pants: "#2e3440" },
+  sales_lead: { hair: "#6b4a2e", skin: "#f2cba4", shirt: "#dce6f2", tie: "#48607c", pants: "#2e3440", accent: "#48607c" },
 };
 
 export const DEFAULT_LOOK: Look = { hair: "#555", skin: "#e6be98", shirt: "#6a6a80", tie: "#444", pants: "#333" };
@@ -23,3 +25,4 @@ export const DEFAULT_LOOK: Look = { hair: "#555", skin: "#e6be98", shirt: "#6a6a
 export const PLAYER_LOOK: Look = { hair: "#a0a0a0", skin: "#efc9a4", shirt: "#3a3a42", tie: "#2a6a9a", pants: "#2a2a30" };
 
 export const lookFor = (roleId: string): Look => LOOKS[roleId] ?? DEFAULT_LOOK;
+export const accentFor = (roleId: string): string => lookFor(roleId).accent ?? lookFor(roleId).shirt;

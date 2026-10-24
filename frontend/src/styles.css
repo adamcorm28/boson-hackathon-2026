@@ -993,3 +993,268 @@ kbd {
   border: 1px solid #9a7a10;
   box-shadow: inset 2px 3px 0 -1px #555;
 }
+
+/* ---- C8 polish: pixel fonts, CRT scanlines, title card ---- */
+
+:root {
+  --font-pixel: "Press Start 2P", ui-monospace, Menlo, monospace;
+  --font-term: "VT323", ui-monospace, Menlo, monospace;
+}
+
+/* The office app (the ?dev panel keeps plain monospace). */
+.app,
+.titlecard,
+.call-window,
+.whiteboard,
+.crt,
+.toasts {
+  font-family: var(--font-term);
+}
+
+.app {
+  font-size: 18px;
+}
+
+.title h1,
+.nameplate,
+.bang,
+.call-titlebar,
+.hud-title,
+.hud-section,
+.wb-head h2,
+.wb-col h3,
+.toast-open,
+.crt-title,
+.crt-base,
+.titlecard-company,
+.titlecard-product,
+.titlecard-start {
+  font-family: var(--font-pixel);
+  font-weight: normal;
+}
+
+.title h1 {
+  font-size: 16px;
+}
+
+.title .muted {
+  font-size: 18px;
+}
+
+.nameplate {
+  font-size: 8px;
+  padding: 3px 5px;
+}
+
+.bang {
+  font-size: 12px;
+}
+
+.speech {
+  font-size: 16px;
+  line-height: 1;
+  white-space: normal;
+  width: max-content;
+  max-width: 190px;
+  text-align: center;
+}
+
+.keybar {
+  font-size: 18px;
+  width: 100%;
+}
+
+.keybar .keys {
+  color: var(--muted);
+}
+
+.keybar kbd,
+.titlecard kbd {
+  font-size: 14px;
+  color: var(--fg);
+  background: #2a2a44;
+  border: 2px solid #5a5a8c;
+  padding: 0 5px;
+  margin: 0 2px 0 6px;
+  opacity: 1;
+}
+
+.hud {
+  font-size: 18px;
+}
+
+.hud-title {
+  font-size: 10px;
+}
+
+.hud-section {
+  font-size: 8px;
+  margin-top: 14px;
+}
+
+.hud-col {
+  grid-template-columns: 96px 1fr 22px;
+}
+
+.call-window {
+  font-size: 18px;
+}
+
+.call-titlebar {
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.call-transcript {
+  font-size: 19px;
+  line-height: 1.15;
+}
+
+.call-role,
+.chip,
+.call-error {
+  font-size: 16px;
+}
+
+/* CRT scanlines + vignette over the whole call window. */
+.call-window::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at center, transparent 60%, rgba(0, 0, 0, 0.35) 100%);
+  animation: crt-flicker 4s steps(2) infinite;
+}
+
+@keyframes crt-flicker {
+  50% {
+    opacity: 0.85;
+  }
+}
+
+.toast-open {
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.toast-cta {
+  font-size: 8px;
+}
+
+.wb-head h2 {
+  font-size: 14px;
+}
+
+.wb-col h3 {
+  font-size: 8px;
+  line-height: 1.8;
+}
+
+.wb-card {
+  font-size: 18px;
+  line-height: 1.05;
+}
+
+.wb-card-meta {
+  font-size: 15px;
+}
+
+.crt-screen {
+  font-size: 20px;
+}
+
+.crt-title {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.crt-head,
+.crt .diff {
+  font-size: 16px;
+}
+
+.crt .diff {
+  line-height: 1.1;
+}
+
+.crt-base {
+  font-size: 8px;
+}
+
+/* Title card */
+.titlecard {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, #26264a 0%, #0c0c18 75%);
+  cursor: pointer;
+}
+
+.titlecard::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(rgba(0, 0, 0, 0.22) 0 2px, transparent 2px 4px);
+}
+
+.titlecard-inner {
+  text-align: center;
+  padding: 16px;
+}
+
+.titlecard-company {
+  font-size: clamp(14px, 3vw, 24px);
+  letter-spacing: 6px;
+  color: var(--muted);
+}
+
+.titlecard-product {
+  font-size: clamp(22px, 6vw, 52px);
+  margin: 18px 0 14px;
+  color: var(--amber);
+  text-shadow: 4px 4px 0 #a8323e, 8px 8px 0 rgba(0, 0, 0, 0.6);
+}
+
+.titlecard-product sup {
+  font-size: 0.4em;
+}
+
+.titlecard-sub {
+  font-size: 24px;
+  color: var(--fg);
+}
+
+.titlecard-start {
+  font-size: 14px;
+  margin: 40px 0 28px;
+  animation: blink 1s steps(2) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.titlecard-keys {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 22px;
+  font-size: 20px;
+  color: var(--muted);
+}
+
+.titlecard-mock {
+  margin-top: 26px;
+  font-size: 18px;
+  color: var(--muted);
+}
