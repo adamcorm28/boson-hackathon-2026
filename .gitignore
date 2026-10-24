@@ -6,3 +6,4 @@ artifacts/
 backend/data/
 backend/company/data/paperclip_ids.json
 .superpowers/
+backend/spikes/out/
