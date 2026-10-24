@@ -28,9 +28,7 @@ export default function App() {
   return (
     <main className="app">
       <h1>Dunder Mifflin Infinity Voice™</h1>
-      <p className="muted">
-        Gateway: {GATEWAY_URL} {USE_MOCK && "(VITE_MOCK=1, mock arrives in C2)"}
-      </p>
+      <p className="muted">Gateway: {USE_MOCK ? "mock (VITE_MOCK=1)" : GATEWAY_URL}</p>
 
       <h2>Roles</h2>
       {error && <p className="error">Can't reach the gateway: {error}</p>}

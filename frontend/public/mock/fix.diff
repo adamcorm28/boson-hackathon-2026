@@ -1,0 +1,32 @@
+diff --git a/checkout/pricing.js b/checkout/pricing.js
+index 3f2a9c1..8b41d07 100644
+--- a/checkout/pricing.js
++++ b/checkout/pricing.js
+@@ -8,10 +8,10 @@ const BULK_THRESHOLD_CASES = 50;
+ const BULK_DISCOUNT = 0.1;
+
+ export function orderTotal(cases, pricePerCase) {
+   const subtotal = cases * pricePerCase;
+-  const discounted = cases > BULK_THRESHOLD_CASES ? subtotal * (1 - BULK_DISCOUNT) : subtotal;
+-  return round2(subtotal);
++  const discounted = cases >= BULK_THRESHOLD_CASES ? subtotal * (1 - BULK_DISCOUNT) : subtotal;
++  return round2(discounted);
+ }
+
+ function round2(n) {
+diff --git a/checkout/pricing.test.js b/checkout/pricing.test.js
+index 51c0e2d..a9d3b44 100644
+--- a/checkout/pricing.test.js
++++ b/checkout/pricing.test.js
+@@ -4,3 +4,11 @@ import { orderTotal } from "./pricing.js";
+ test("small orders pay full price", () => {
+   expect(orderTotal(10, 45)).toBe(450);
+ });
++
++test("60 cases get the 10% bulk discount", () => {
++  expect(orderTotal(60, 45)).toBe(2430);
++});
++
++test("exactly 50 cases get the bulk discount", () => {
++  expect(orderTotal(50, 45)).toBe(2025);
++});
