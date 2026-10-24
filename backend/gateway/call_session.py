@@ -41,6 +41,16 @@ USER_REQUEST = re.compile(
     r"would you|fix|make|build|send|draft|write|research|put together|start|handle|take care|delegate|assign)\b",
     re.IGNORECASE,
 )
+# ...and sometimes says it's looking something up without calling a tool, then stalls.
+LOOKUP_CLAIM = re.compile(
+    r"(\blet me (check|look|pull|see|grab|find)|\bi'?m (checking|looking|pulling)|\bchecking (your|the|on|that)|"
+    r"\bpulling (up|that)|\bone (sec|second|moment)\b|\bgive me a (sec|second)|\bbear with me)",
+    re.IGNORECASE,
+)
+LOOKUP_NUDGE = (
+    "[notification from system, not the user] You said you'd check, but you didn't call a tool, so you "
+    "don't have the answer yet. Call the right tool now, then answer in one or two short sentences."
+)
 DELEGATION_NUDGE = (
     "[notification from system, not the user] You just told the user the work is happening, but you "
     "never called delegate_task, so nobody is working on it. Call delegate_task now with the right "
@@ -96,6 +106,7 @@ class CallSession:
         self._reason = "ended"
         self._delegated_this_turn = False  # delegate_task ran since the user last spoke
         self._nudged_this_turn = False
+        self._lookup_nudged_this_turn = False
         self._response_text = ""  # transcript of the response in progress
         self._last_user_text = ""
 
@@ -260,14 +271,14 @@ class CallSession:
                 await self._to_client({"type": "agent.speaking", "value": True})
             case "response.done":
                 resp = ev.get("response", {})
-                log.debug("response.done status=%s output=%s", resp.get("status"),
+                log.info("response.done status=%s output=%s", resp.get("status"),
                          [o.get("name") or o.get("type") for o in resp.get("output", [])])
                 await self._to_client({"type": "agent.speaking", "value": False})
                 ran_tools = await self._run_function_calls(resp)
                 if not ran_tools:
-                    await self._guard_delegation()
+                    await self._guard_claims()
             case "input_audio_buffer.speech_started":
-                self._delegated_this_turn = self._nudged_this_turn = False
+                self._delegated_this_turn = self._nudged_this_turn = self._lookup_nudged_this_turn = False
                 if self._inflight is not None:  # user spoke before the notice started
                     self.queue.requeue_front(self._inflight)
                     self._inflight = None
@@ -283,25 +294,41 @@ class CallSession:
                 return True
         return False
 
-    async def _guard_delegation(self) -> None:
-        """If the agent claimed work is underway without delegating, make it delegate."""
-        if ("delegate_task" not in self.role.voice_tools or not self.role.can_delegate_to
-                or self._delegated_this_turn or self._nudged_this_turn or self._inflight
-                or not DELEGATION_CLAIM.search(self._response_text)):
+    async def _guard_claims(self) -> None:
+        """The reply said it was doing something but called no tool: make it actually do it."""
+        if self._inflight or self._continuing:
             return
-        text = self._response_text.strip()
-        if re.search(r"\balready\b", text, re.IGNORECASE) or text.endswith("?"):
-            return  # past work, or offering rather than claiming
-        if not USER_REQUEST.search(self._last_user_text):
-            return  # small talk: the user didn't ask for anything
-        self._nudged_this_turn = True
-        log.info("agent claimed delegation without calling delegate_task; nudging")
+        if await self._guard_delegation():
+            return
+        if (not self._lookup_nudged_this_turn and LOOKUP_CLAIM.search(self._response_text)
+                and any(t not in ("delegate_task", "web_search") for t in self.role.voice_tools)):
+            self._lookup_nudged_this_turn = True
+            log.info("agent claimed a lookup without calling a tool; nudging")
+            await self._nudge(LOOKUP_NUDGE)
+
+    async def _nudge(self, text: str) -> None:
         await self._send_upstream({
             "type": "conversation.item.create",
-            "item": {"type": "message", "role": "user", "content": [{"type": "input_text", "text": DELEGATION_NUDGE}]},
+            "item": {"type": "message", "role": "user", "content": [{"type": "input_text", "text": text}]},
         })
         self._continuing = True
         await self._send_upstream({"type": "response.create"})
+
+    async def _guard_delegation(self) -> bool:
+        """If the agent claimed work is underway without delegating, make it delegate."""
+        if ("delegate_task" not in self.role.voice_tools or not self.role.can_delegate_to
+                or self._delegated_this_turn or self._nudged_this_turn
+                or not DELEGATION_CLAIM.search(self._response_text)):
+            return False
+        text = self._response_text.strip()
+        if re.search(r"\balready\b", text, re.IGNORECASE) or text.endswith("?"):
+            return False  # past work, or offering rather than claiming
+        if not USER_REQUEST.search(self._last_user_text):
+            return False  # small talk: the user didn't ask for anything
+        self._nudged_this_turn = True
+        log.info("agent claimed delegation without calling delegate_task; nudging")
+        await self._nudge(DELEGATION_NUDGE)
+        return True
 
     async def _run_function_calls(self, response: dict) -> bool:
         fcs = [o for o in response.get("output", []) if o.get("type") == "function_call"]

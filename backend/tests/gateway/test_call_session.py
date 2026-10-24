@@ -470,3 +470,38 @@ async def test_no_nudge_for_small_talk_claims(harness):
     assert nudges(harness) == 0
     harness.client.disconnect()
     await harness.task
+
+
+def lookup_nudges(h) -> int:
+    return sum(e["type"] == "conversation.item.create" and "you didn't call a tool" in json.dumps(e)
+               for e in h.upstream.sent)
+
+
+async def test_lookup_claim_without_tool_gets_nudged_once_per_turn(harness):
+    # real transcript: "Let me check your inbox real quick." then "I'm checking your inbox right now." forever
+    harness.make("ceo")
+    await started(harness)
+    harness.upstream.feed(user_says("Is there anything in my inbox?"), *say("Let me check your inbox real quick."))
+    await until(lambda: lookup_nudges(harness) == 1)
+    harness.upstream.feed(*say("I'm checking your inbox right now."))  # same turn: once only
+    await asyncio.sleep(0.05)
+    assert lookup_nudges(harness) == 1
+    harness.upstream.feed({"type": "input_audio_buffer.speech_started"}, user_says("Still checking?"),
+                          *say("I'm checking your inbox right now."))
+    await until(lambda: lookup_nudges(harness) == 2)
+    harness.client.disconnect()
+    await harness.task
+
+
+async def test_no_lookup_nudge_when_tool_was_called(harness):
+    harness.make("ceo")
+    await started(harness)
+    harness.upstream.feed({"type": "response.created"},
+                          {"type": "response.output_audio_transcript.done", "transcript": "Let me check your inbox."},
+                          {"type": "response.done", "response": {"output": [{
+                              "type": "function_call", "name": "read_inbox", "call_id": "r1", "arguments": "{}"}]}})
+    await until(lambda: "tool.called" in harness.client.types())
+    await asyncio.sleep(0.05)
+    assert lookup_nudges(harness) == 0
+    harness.client.disconnect()
+    await harness.task
