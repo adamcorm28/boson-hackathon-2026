@@ -1,0 +1,23 @@
+{
+  "call_id": "077435cc2149",
+  "role": "eng_lead",
+  "role_name": "Ryan Howard",
+  "started_at": 1792858072.0816529,
+  "ended_at": 1792858087.448812,
+  "transcript": [
+    [
+      "eng_lead",
+      "Ryan here. Let's disrupt something. What do you need?"
+    ],
+    [
+      "user",
+      "Ryan, I need that bug fixed."
+    ],
+    [
+      "eng_lead",
+      "You got it. I'm handing the bulk discount checkout fix to Dwight right now. He'll get that squared away for you."
+    ]
+  ],
+  "touched_task_ids": [],
+  "summary": "eng_lead: Ryan here. Let's disrupt something. What do you need? / user: Ryan, I need that bug fixed. / eng_lead: You got it. I'm handing the bulk discount checkout fix to Dwight right now. He'll get that squared away for you."
+}

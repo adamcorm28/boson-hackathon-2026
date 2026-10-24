@@ -1,0 +1,15 @@
+{
+  "call_id": "bc11ed8c4ed3",
+  "role": "sales_lead",
+  "role_name": "Jim Halpert",
+  "started_at": 1792857343.654165,
+  "ended_at": 1792857352.278014,
+  "transcript": [
+    [
+      "sales_lead",
+      "Hey, it's Jim. What's up?"
+    ]
+  ],
+  "touched_task_ids": [],
+  "summary": "sales_lead: Hey, it's Jim. What's up?"
+}

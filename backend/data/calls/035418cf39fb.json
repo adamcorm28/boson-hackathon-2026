@@ -1,0 +1,35 @@
+{
+  "call_id": "035418cf39fb",
+  "role": "ceo",
+  "role_name": "Michael Scott",
+  "started_at": 1792857332.9748962,
+  "ended_at": 1792857338.899904,
+  "transcript": [
+    [
+      "ceo",
+      "Hello! Great to hear from you. Let me pull up the latest branch overview so I can give you the full picture on our Q4 numbers and what's flagged."
+    ],
+    [
+      "user",
+      "Oh, in progress right now."
+    ],
+    [
+      "ceo",
+      "Great to hear from you! We're currently at 23% of our Q4 goal, sitting at $520,000 in sales so far. Our monthly sales are strong at $700,000,"
+    ],
+    [
+      "user",
+      "Editors."
+    ],
+    [
+      "ceo",
+      "doing fantastic."
+    ],
+    [
+      "user",
+      "Financials, Kevin."
+    ]
+  ],
+  "touched_task_ids": [],
+  "summary": "ceo: Hello! Great to hear from you. Let me pull up the latest branch overview so I can give you the full picture on our Q4 numbers and what's flagged. / user: Oh, in progress right now. / ceo: Great to hear from you! We're currently at 23% of our Q4 goal, sitting at $520,000 in sales so far. Our monthly sales are strong at $700,000, / user: Editors. / ceo: doing fantastic. / user: Financials, Kevin."
+}

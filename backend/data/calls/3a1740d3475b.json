@@ -1,0 +1,50 @@
+{
+  "call_id": "3a1740d3475b",
+  "role": "sales_lead",
+  "role_name": "Jim Halpert",
+  "started_at": 1792857688.550975,
+  "ended_at": 1792857733.148385,
+  "transcript": [
+    [
+      "sales_lead",
+      "Hey, it's Jim. How's it going?"
+    ],
+    [
+      "user",
+      "Hey, Jimbo! Got a notification on your desk."
+    ],
+    [
+      "sales_lead",
+      "Yeah, I just got a ping. Looks like the Lackawanna County quote is still on hold. I'm digging into the blockers right now to see what's holding us up."
+    ],
+    [
+      "user",
+      "Cool. Yeah, what's holding us up?"
+    ],
+    [
+      "sales_lead",
+      "It's the bulk discount checkout bug, same one that hit Maria's order. Lackawanna's buyer tried a 60-case test order and got charged full price. We're on it, but it's blocking their quote until the fix is live."
+    ],
+    [
+      "sales_lead",
+      "Done, I'm on it."
+    ],
+    [
+      "user",
+      "Okay, great. It actually looks like Dwight just finished that up, so I'm gonna need you to."
+    ],
+    [
+      "user",
+      "Okay, great. It actually looks like Dwight just finished that up, so I'm gonna need you to fix it up now."
+    ],
+    [
+      "sales_lead",
+      "Got it. I'm reaching out to Lackawanna County right now to confirm the fix is live and get their quote moving."
+    ]
+  ],
+  "touched_task_ids": [
+    "DM-103",
+    "DUN-24"
+  ],
+  "summary": "user: Cool. Yeah, what's holding us up? / sales_lead: It's the bulk discount checkout bug, same one that hit Maria's order. Lackawanna's buyer tried a 60-case test order and got charged full price. We're on it, but it's blocking their quote until the fix is live. / sales_lead: Done, I'm on it. / user: Okay, great. It actually looks like Dwight just finished that up, so I'm gonna need you to. / user: Okay, great. It actually looks like Dwight just finished that up, so I'm gonna need you to fix it up now. / sales_lead: Got it. I'm reaching out to Lackawanna County right now to confirm the fix is live and get their quote moving."
+}
