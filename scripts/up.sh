@@ -38,7 +38,9 @@ else
   echo "Company: mock (set COMPANY_BACKEND=paperclip in backend/.env for real agents)"
 fi
 
-if [ ! -d "$REPO_ROOT/frontend/node_modules" ]; then
+# Install when node_modules is missing or older than the lockfile (a teammate added a package).
+if [ ! -f "$REPO_ROOT/frontend/node_modules/.package-lock.json" ] \
+   || [ "$REPO_ROOT/frontend/package-lock.json" -nt "$REPO_ROOT/frontend/node_modules/.package-lock.json" ]; then
   echo "Installing frontend dependencies..."
   (cd "$REPO_ROOT/frontend" && npm install --silent)
 fi
