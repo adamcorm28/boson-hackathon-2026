@@ -311,3 +311,5 @@ artifacts/                        # gitignored
 - [ ] **Step 3:** Repeat Step 2 for the Sales deck task. Confirm the `.pptx` opens from `http://localhost:8000/artifacts/...`.
 - [ ] **Step 4:** Run `reset_demo.sh` and check that the next run starts clean.
 - [ ] **Step 5:** Commit `chore(paperclip): demo reset script`.
+
+**Done 2026-10-24.** The reset lives in `paperclip/reset_demo.py` (behind `reset_demo.sh` / `make reset-demo`). It also cancels active runs, resets agent sessions, and restores seed-issue statuses and comments. Dry-run results are in `docs/superpowers/spikes/paperclip-findings.md`.

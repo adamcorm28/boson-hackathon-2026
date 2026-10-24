@@ -26,14 +26,15 @@ COMPANY_NAME = "Dunder Mifflin Paper Company — Scranton"  # must match papercl
 TIMEOUT_SECONDS = 3.0
 FLAGGED_PRIORITIES = ("critical", "high")
 LAST_COMMENT_CHARS = 300
-# Anthropic API list prices, USD per million tokens: (input, cached input read, output).
-# Only models whose cache-read price is published are listed (claude-api pricing table, 2026-10-06).
+# Anthropic API list prices, USD per million tokens: (input, cache hits, output).
+# From platform.claude.com/docs/en/about-claude/pricing, checked 2026-10-24.
 PRICES_PER_MTOK = {
+    "claude-opus-5": (5.00, 0.50, 25.00),
     "claude-opus-5-5": (4.00, 0.20, 20.00),
-    "claude-sonnet-5-5": (2.00, 0.20, 10.00),
+    "claude-sonnet-5-5": (2.00, 0.10, 10.00),
     "claude-fable-5-1": (10.00, 0.25, 50.00),
 }
-DEFAULT_PRICING_MODEL = "claude-opus-5-5"  # Claude Code's "opus" alias
+DEFAULT_PRICING_MODEL = "claude-opus-5"  # what the agents run (see DEFAULT_AGENT_MODEL in paperclip/seed.py)
 _FOOTER = re.compile(r"\n\n---\n((?:[a-z_]+: [^\n]*\n?)+)\s*$")
 
 
