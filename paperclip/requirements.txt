@@ -1,0 +1,5 @@
+python-pptx
+openpyxl
+httpx
+pytest
+pytest-asyncio

@@ -227,14 +227,14 @@ artifacts/                        # gitignored
 - It creates or reuses by name:
   - the company "Dunder Mifflin Paper Company — Scranton", with the goal "Beat Stamford in Q4"
   - the 5 agents, with `name` = character, `adapterType: "claude_local"`, `adapterConfig.cwd` (`demo_repo` for the engineer, `repo_root` for the others) and `reportsTo` per the tree
-  - the agents' `instructionsBundle` from `AGENTS.md`, with `{ARTIFACTS_DIR}` and `{GATEWAY_PUBLIC_URL}` substituted
+  - the agents' `instructionsBundle` from `AGENTS.md`, with every placeholder substituted (absolute paths): `{ARTIFACTS_DIR}`, `{GATEWAY_PUBLIC_URL}`, `{SKILLS_DIR}` (= `paperclip/skills`), `{PYTHON}` (= `paperclip/.venv/bin/python`), `{DEMO_REPO}` and `{COMPANY_DATA_DIR}` (= `backend/company/data`)
   - every issue in `issues_seed.json`, **unassigned** so seeding wakes no one
 - It uses the routes recorded in `paperclip-findings.md`. CLI: `python paperclip/seed.py`.
 
 - [ ] **Step 1: Write failing tests** with `httpx.MockTransport` faking the routes:
   - `test_seed_creates_five_agents_with_reporting_lines`: check the captured POST bodies. The engineer's `reportsTo` equals the eng_lead's ID, and `adapterType == "claude_local"`.
   - `test_seed_is_idempotent`: the transport reports the company and agents as existing. Expect no agent POSTs and the same IDs returned.
-  - `test_instructions_placeholders_filled`: no `{ARTIFACTS_DIR}` is left in any posted bundle.
+  - `test_instructions_placeholders_filled`: no `{[A-Z_]+}` placeholder is left in any posted bundle.
   - `test_seed_issues_unassigned`
 - [ ] **Step 2:** Run `pytest tests/company/test_seed.py -v`. Expected: FAIL.
 - [ ] **Step 3:** Implement `seed.py`.
