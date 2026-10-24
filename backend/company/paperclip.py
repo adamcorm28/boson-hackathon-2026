@@ -1,6 +1,8 @@
 """CompanyAPI backed by a local Paperclip instance (routes: docs/superpowers/spikes/paperclip-findings.md).
 
-Needs backend/company/data/paperclip_ids.json, written by paperclip/seed.py. Mapping rules:
+Ids come from backend/company/data/paperclip_ids.json (written by paperclip/seed.py) or, when that
+file is missing, are discovered on first use by matching the company, agent and seed issue names
+against the seeded Paperclip data. Mapping rules:
 - roles <-> agent ids via ids["agents"]
 - origin and ownership live in a description footer ("---" then "key: value" lines): voice tasks carry
   origin/requested_by and are assigned; seed issues carry origin/owner and stay unassigned (assigning wakes agents)
@@ -13,10 +15,14 @@ import re
 from pathlib import Path
 
 import httpx
+import yaml
 
 from company.types import AgentStatus, Comment, CompanyUnavailable, Issue, Status
 
-DEFAULT_IDS_PATH = Path(__file__).parent / "data" / "paperclip_ids.json"
+DATA_DIR = Path(__file__).parent / "data"
+ROLES_DIR = Path(__file__).parent.parent / "roles"
+DEFAULT_IDS_PATH = DATA_DIR / "paperclip_ids.json"
+COMPANY_NAME = "Dunder Mifflin Paper Company — Scranton"  # must match paperclip/seed.py
 TIMEOUT_SECONDS = 3.0
 FLAGGED_PRIORITIES = ("critical", "high")
 LAST_COMMENT_CHARS = 300
@@ -40,19 +46,41 @@ def _split_footer(description: str) -> tuple[str, dict[str, str]]:
 
 
 class PaperclipCompany:
-    def __init__(self, base_url: str, ids: dict, client: httpx.AsyncClient | None = None):
+    def __init__(self, base_url: str, ids: dict | None = None, client: httpx.AsyncClient | None = None):
         self.base_url = base_url
-        self.ids = ids
+        self.ids: dict | None = None  # None until loaded or discovered
         self._client = client or httpx.AsyncClient(base_url=base_url, timeout=TIMEOUT_SECONDS)
-        self._role_by_agent = {agent_id: role for role, agent_id in ids["agents"].items()}
-        self._seed_id_by_issue = {issue_id: seed_id for seed_id, issue_id in ids["issues"].items()}
+        if ids is not None:
+            self._use_ids(ids)
 
     @classmethod
     def from_env(cls, ids_path: Path | None = None) -> "PaperclipCompany":
         ids_path = ids_path or DEFAULT_IDS_PATH
-        if not ids_path.exists():
-            raise RuntimeError(f"{ids_path} not found; run paperclip/seed.py against Paperclip first")
-        return cls(os.getenv("PAPERCLIP_URL", "http://127.0.0.1:3100"), json.loads(ids_path.read_text()))
+        ids = json.loads(ids_path.read_text()) if ids_path.exists() else None
+        return cls(os.getenv("PAPERCLIP_URL", "http://127.0.0.1:3100"), ids)
+
+    def _use_ids(self, ids: dict) -> None:
+        self.ids = ids
+        self._role_by_agent = {agent_id: role for role, agent_id in ids["agents"].items()}
+        self._seed_id_by_issue = {issue_id: seed_id for seed_id, issue_id in ids["issues"].items()}
+
+    async def _ensure_ids(self) -> None:
+        if self.ids is None:
+            self._use_ids(await self._discover_ids())
+
+    async def _discover_ids(self) -> dict:
+        """Find the seeded company, agents and seed issues by name, as paperclip/seed.py created them."""
+        company = next((c for c in await self._request("GET", "/api/companies") if c.get("name") == COMPANY_NAME), None)
+        if company is None:
+            raise CompanyUnavailable(f"{COMPANY_NAME!r} isn't in Paperclip yet; run paperclip/seed.py")
+        cid = company["id"]
+        role_by_name = {r["name"]: r["id"] for r in (yaml.safe_load(p.read_text()) for p in ROLES_DIR.glob("*.yaml"))}
+        agents = {role_by_name[a["name"]]: a["id"]
+                  for a in await self._request("GET", f"/api/companies/{cid}/agents") if a.get("name") in role_by_name}
+        seed_id_by_title = {i["title"]: i["task_id"] for i in json.loads((DATA_DIR / "issues_seed.json").read_text())}
+        issues = {seed_id_by_title[i["title"]]: i["id"]
+                  for i in await self._request("GET", f"/api/companies/{cid}/issues") if i.get("title") in seed_id_by_title}
+        return {"company_id": cid, "agents": agents, "issues": issues}
 
     # --- HTTP ---------------------------------------------------------------------------
 
@@ -99,11 +127,13 @@ class PaperclipCompany:
     # --- CompanyAPI ---------------------------------------------------------------------
 
     async def list_issues(self, role: str | None = None, status: Status | None = None) -> list[Issue]:
+        await self._ensure_ids()
         raw = await self._request("GET", f"/api/companies/{self.ids['company_id']}/issues")
         issues = [self._issue(r) for r in raw]  # the API has no filters; filter here
         return [i for i in issues if (role is None or i.assignee_role == role) and (status is None or i.status == status)]
 
     async def get_issue(self, task_id: str) -> Issue:
+        await self._ensure_ids()
         try:
             raw = await self._request("GET", f"/api/issues/{self._paperclip_id(task_id)}")
         except KeyError:
@@ -111,6 +141,7 @@ class PaperclipCompany:
         return self._issue(raw, await self._comments(task_id))
 
     async def create_task(self, assignee_role: str, title: str, brief: str, requested_by_role: str) -> str:
+        await self._ensure_ids()
         raw = await self._request("POST", f"/api/companies/{self.ids['company_id']}/issues", json={
             "title": title,
             "description": f"{brief}\n\n---\norigin: voice\nrequested_by: {requested_by_role}",
@@ -120,6 +151,7 @@ class PaperclipCompany:
         return raw["identifier"]
 
     async def add_comment(self, task_id: str, body: str) -> None:
+        await self._ensure_ids()
         await self._request("POST", f"/api/issues/{self._paperclip_id(task_id)}/comments", json={"body": body})
 
     async def get_agent_status(self, role: str) -> AgentStatus:
@@ -135,6 +167,7 @@ class PaperclipCompany:
         """Billed cents per role, token counts, and what the same tokens would cost at API list prices.
         Runs on a Claude subscription bill 0 cents, so the estimate is the meaningful dollar figure.
         PAPERCLIP_PRICING_MODEL picks the price row; an unpriced model gives estimate=None."""
+        await self._ensure_ids()
         rows = await self._request("GET", f"/api/companies/{self.ids['company_id']}/costs/by-agent")
         by_role, tokens = {}, {}
         for row in rows:

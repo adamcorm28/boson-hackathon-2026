@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 import company
-from company.paperclip import PaperclipCompany
+from company.paperclip import COMPANY_NAME, PaperclipCompany
 from company.types import CompanyUnavailable
 
 CID = "co-1"
@@ -203,9 +203,44 @@ def test_from_env_reads_ids_file(tmp_path, monkeypatch):
     assert pc.base_url == "http://example:3100" and pc.ids == IDS
 
 
-def test_from_env_without_seed_explains(tmp_path):
-    with pytest.raises(RuntimeError, match="seed.py"):
-        PaperclipCompany.from_env(ids_path=tmp_path / "missing.json")
+AGENT_NAMES = {"ag-ceo": "Michael Scott", "ag-cfo": "Kevin Malone", "ag-eng": "Ryan Howard",
+               "ag-dwight": "Dwight Schrute", "ag-jim": "Jim Halpert"}
+
+
+def with_discovery_routes(fake, company_name=COMPANY_NAME):
+    original = fake.handler
+
+    def handler(request):
+        if request.method == "GET" and request.url.path == "/api/companies":
+            return httpx.Response(200, json=[{"id": "other", "name": "Spike Co"}, {"id": CID, "name": company_name}])
+        if request.method == "GET" and request.url.path == f"/api/companies/{CID}/agents":
+            return httpx.Response(200, json=[{"id": i, "name": n} for i, n in AGENT_NAMES.items()])
+        return original(request)
+
+    return handler
+
+
+async def test_discovers_ids_by_name_when_file_missing(fake):
+    client = httpx.AsyncClient(transport=httpx.MockTransport(with_discovery_routes(fake)), base_url="http://paperclip")
+    pc = PaperclipCompany("http://paperclip", ids=None, client=client)
+    issues = {i.task_id: i for i in await pc.list_issues()}
+    assert {"DM-101", "DM-103", "DUNA-11"} == set(issues)
+    assert issues["DUNA-11"].assignee_role == "engineer"
+    assert pc.ids["agents"] == IDS["agents"]
+    assert pc.ids["issues"] == {"DM-101": "is-1", "DM-103": "is-3"}
+
+
+async def test_discovery_without_seeded_company_explains(fake):
+    client = httpx.AsyncClient(transport=httpx.MockTransport(with_discovery_routes(fake, "Someone Else")),
+                               base_url="http://paperclip")
+    pc = PaperclipCompany("http://paperclip", ids=None, client=client)
+    with pytest.raises(CompanyUnavailable, match="seed.py"):
+        await pc.list_issues()
+
+
+def test_from_env_without_ids_file_discovers_lazily(tmp_path):
+    pc = PaperclipCompany.from_env(ids_path=tmp_path / "missing.json")
+    assert pc.ids is None
 
 
 def test_get_company_selects_paperclip(tmp_path, monkeypatch):
