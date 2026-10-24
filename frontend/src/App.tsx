@@ -36,6 +36,10 @@ function OfficeApp() {
   const overlayOpen = titleOpen || boardOpen || resultTaskId !== null;
 
   useEffect(() => storeMode(mode), [mode]);
+  // The page background and overlays follow the mode's theme too.
+  useEffect(() => {
+    document.body.dataset.theme = mode;
+  }, [mode]);
 
   // M switches between arcade and classic (not mid-call or behind an overlay).
   const canSwitch = !overlayOpen && call.state.status === "idle";
@@ -105,10 +109,19 @@ function OfficeApp() {
   const dismissToast = useCallback((id: string) => officeDispatch({ type: "dismiss_toast", id }), []);
 
   return (
-    <main className="app">
+    <main className={`app theme-${mode}`}>
       <header className="title">
-        <h1>DUNDER MIFFLIN · SCRANTON</h1>
-        <span className="muted">Infinity Voice™</span>
+        {mode === "arcade" ? (
+          <>
+            <h1>DUNDER MIFFLIN · SCRANTON</h1>
+            <span className="muted">Infinity Voice™</span>
+          </>
+        ) : (
+          <>
+            <h1>Dunder Mifflin</h1>
+            <span className="muted">Scranton Branch · Infinity Voice</span>
+          </>
+        )}
         <div className="mode-switch" role="radiogroup" aria-label="Mode">
           {(["arcade", "classic"] as const).map((m) => (
             <button
@@ -162,6 +175,7 @@ function OfficeApp() {
           onOpenBoard={() => setBoardOpen(true)}
           onOpenResult={openResult}
           onDismissToast={dismissToast}
+          variant={mode}
         />
       </div>
 
@@ -181,7 +195,7 @@ function OfficeApp() {
 
       {titleOpen && <TitleCard mode={mode} onModeChange={setMode} mock={USE_MOCK} onStart={() => setTitleOpen(false)} />}
 
-      <CallWindow state={call.state} roles={roles} talking={call.talking} media={call.media} muted={call.muted} onToggleMute={call.toggleMute} onHangup={call.hangup} onRetryMic={call.retryMic} />
+      <CallWindow state={call.state} roles={roles} talking={call.talking} media={call.media} muted={call.muted} onToggleMute={call.toggleMute} onHangup={call.hangup} onRetryMic={call.retryMic} classic={mode === "classic"} />
     </main>
   );
 }

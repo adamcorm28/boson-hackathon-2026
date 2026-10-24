@@ -23,9 +23,17 @@ interface Props {
   onOpenBoard(): void;
   onOpenResult(taskId: string): void;
   onDismissToast(id: string): void;
+  /** Wording for the mode: the arcade's whiteboard, or classic mode's task board. */
+  variant?: "arcade" | "classic";
 }
 
-export function Hud({ board, roles, justMoved, toasts, onOpenBoard, onOpenResult, onDismissToast }: Props) {
+const TEXT = {
+  arcade: { title: "WHITEBOARD", open: "click or", caption: "each square is a task, colored by who owns it", section: "IN PROGRESS NOW" },
+  classic: { title: "Task board", open: "Open", caption: "Each dot is a task, colored by owner", section: "In progress" },
+};
+
+export function Hud({ board, roles, justMoved, toasts, onOpenBoard, onOpenResult, onDismissToast, variant = "arcade" }: Props) {
+  const text = TEXT[variant];
   const first = (id: string | null) => roles.find((r) => r.id === id)?.name.split(" ")[0] ?? id ?? "—";
 
   return (
@@ -44,9 +52,9 @@ export function Hud({ board, roles, justMoved, toasts, onOpenBoard, onOpenResult
         }}
       >
         <div className="hud-head">
-          <span className="hud-title">WHITEBOARD</span>
+          <span className="hud-title">{text.title}</span>
           <span className="hud-open">
-            click or <kbd>B</kbd>
+            {text.open} <kbd>B</kbd>
           </span>
         </div>
 
@@ -71,9 +79,9 @@ export function Hud({ board, roles, justMoved, toasts, onOpenBoard, onOpenResult
             );
           })}
         </div>
-        <div className="hud-caption">each square is a task, colored by who owns it</div>
+        <div className="hud-caption">{text.caption}</div>
 
-        <div className="hud-section">IN PROGRESS NOW</div>
+        <div className="hud-section">{text.section}</div>
         {board?.columns.in_progress.length ? (
           <ul className="hud-cards">
             {board.columns.in_progress.map((c) => (

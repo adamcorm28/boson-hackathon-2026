@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Role } from "../api/types";
 import type { CallState } from "./callReducer";
+import { Avatar } from "../ui/Avatar";
 import { Portrait } from "./Portrait";
 
 interface Props {
@@ -16,6 +17,8 @@ interface Props {
   onToggleMute?(): void;
   onHangup(): void;
   onRetryMic(): void;
+  /** Classic mode: a round initials avatar instead of the pixel portrait. */
+  classic?: boolean;
 }
 
 const firstName = (roles: Role[], id: string | null) => roles.find((r) => r.id === id)?.name.split(" ")[0] ?? id ?? "?";
@@ -37,7 +40,7 @@ function useElapsed(live: boolean): string {
   return `${String(Math.floor(secs / 60)).padStart(2, "0")}:${String(secs % 60).padStart(2, "0")}`;
 }
 
-export function CallWindow({ state, roles, talking, media, muted = false, onToggleMute, onHangup, onRetryMic }: Props) {
+export function CallWindow({ state, roles, talking, media, muted = false, onToggleMute, onHangup, onRetryMic, classic = false }: Props) {
   const transcriptRef = useRef<HTMLDivElement>(null);
   const [showTranscript, setShowTranscript] = useState(true);
   const role = roles.find((r) => r.id === state.roleId);
@@ -59,6 +62,11 @@ export function CallWindow({ state, roles, talking, media, muted = false, onTogg
   const name = firstName(roles, state.roleId);
   const fullName = role?.name ?? name;
   const caption = state.lines.at(-1);
+  const face = classic ? (
+    <Avatar roleId={state.roleId} name={fullName} size={168} className={`call-avatar ${talking ? "talking" : ""}`} />
+  ) : (
+    <Portrait roleId={state.roleId} talking={talking} pixel={20} />
+  );
 
   return (
     <div className="zoom-backdrop">
@@ -92,12 +100,10 @@ export function CallWindow({ state, roles, talking, media, muted = false, onTogg
                   talking={talking}
                   media={media}
                   name={fullName}
-                  placeholder={<Portrait roleId={state.roleId} talking={talking} pixel={20} />}
+                  placeholder={face}
                 />
               ) : (
-                <div className="zoom-portrait">
-                  <Portrait roleId={state.roleId} talking={talking} pixel={20} />
-                </div>
+                <div className="zoom-portrait">{face}</div>
               )}
               {state.status === "connecting" && <div className="zoom-ringing">Calling {name}…</div>}
               {state.videoNotice && <div className="zoom-video-notice">{state.videoNotice} · audio only</div>}
