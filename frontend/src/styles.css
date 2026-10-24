@@ -2156,8 +2156,10 @@ button.pill.result:hover:not(:disabled) {
 }
 
 /* Notifications (toasts) */
+/* Bottom-right, clear of the header and the task board. */
 .theme-classic .toasts {
-  top: 72px;
+  top: auto;
+  bottom: 20px;
   right: 20px;
 }
 
@@ -2172,7 +2174,7 @@ button.pill.result:hover:not(:disabled) {
 
 @keyframes classic-toast-in {
   from {
-    transform: translateY(-8px);
+    transform: translateY(8px);
     opacity: 0;
   }
 }
