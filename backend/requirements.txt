@@ -4,3 +4,7 @@ httpx
 websockets>=13
 python-dotenv
 certifi
+pyyaml
+anthropic
+pytest
+pytest-asyncio
