@@ -8,7 +8,8 @@ async def test_instructions_contain_persona_and_rules(roles):
     assert "never read out IDs or URLs" in text
     assert "at most one comedy bit" in text
     assert "delegate_task" in text
-    assert text.index("Speaking style") < text.index("Tools") < text.index("## Briefing")
+    assert text.index("Speaking style") < text.index("Tools") < text.index("## Briefing") < text.index("Call start")
+    assert "Answer the call in character with: Yeah, Ryan." in text
 
 
 async def test_briefing_lists_own_open_issues_only(roles, company):
@@ -59,3 +60,10 @@ def test_greeting(roles):
     assert greeting_instructions(roles["ceo"]) == (
         "Answer the call in character with: Michael Scott, World's Best Boss. Talk to me."
     )
+
+
+async def test_briefing_lists_delegation_targets(roles, company):
+    text = await build_briefing(roles["eng_lead"], company, [], [], roles)
+    assert 'Dwight Schrute: assignee "engineer"' in text
+    dwight = await build_briefing(roles["engineer"], company, [], [], roles)
+    assert "hand work to" not in dwight

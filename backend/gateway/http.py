@@ -1,13 +1,18 @@
-"""Gateway routes for the frontend (spec §7a): /roles /board /tasks/{id} /events."""
+"""Gateway routes for the frontend (spec §7a): /roles /board /tasks/{id} /events /call/{role_id}."""
 
 from dataclasses import asdict
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
 
 from company.types import CompanyUnavailable
 from gateway import app_state, company_compat
+from gateway.call_session import CallSession
 from gateway.events import sse_stream
+from gateway.tools import CallContext
+
+CLOSE_UNKNOWN_ROLE = 4404
+CLOSE_ALREADY_ON_CALL = 4409
 
 BOARD_COLUMNS = ("backlog", "todo", "in_progress", "in_review", "blocked", "done")
 
@@ -62,3 +67,29 @@ async def events():
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+@router.websocket("/call/{role_id}")
+async def call(ws: WebSocket, role_id: str):
+    await ws.accept()  # accept first so the browser sees our close code
+    role = app_state.roles.get(role_id)
+    if role is None:
+        await ws.close(code=CLOSE_UNKNOWN_ROLE)
+        return
+    if app_state.active_call is not None:
+        await ws.close(code=CLOSE_ALREADY_ON_CALL)
+        return
+    ctx = CallContext(role=role, company=app_state.company, roles=app_state.roles, on_task_started=None)
+    session = CallSession(
+        role, ws, app_state.connect_upstream, ctx, app_state.queue, app_state.bus,
+        app_state.memory, mode=app_state.injection_mode,
+    )
+    app_state.active_call = session
+    try:
+        await session.run()
+    finally:
+        app_state.active_call = None
+        try:
+            await ws.close()
+        except (RuntimeError, WebSocketDisconnect):
+            pass  # already closed by the browser
