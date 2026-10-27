@@ -120,6 +120,7 @@ export function CallWindow({ state, roles, talking, media, muted = false, onTogg
               )}
               {state.status === "connecting" && <div className="zoom-ringing">Calling {name}…</div>}
               {state.videoNotice && <div className="zoom-video-notice">{state.videoNotice} · audio only</div>}
+              {state.voiceNotice && <div className="zoom-video-notice">{state.voiceNotice}</div>}
               <span className="zoom-name">
                 <MicIcon off={false} /> {fullName}
                 {role?.title && <span className="zoom-name-title"> · {role.title}</span>}

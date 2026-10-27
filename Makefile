@@ -10,7 +10,7 @@ PAPERCLIP_PY := paperclip/.venv/bin/python
 
 .DEFAULT_GOAL := help
 .PHONY: help setup test test-backend test-paperclip gateway paperclip-start paperclip-stop paperclip-status \
-        paperclip-logs paperclip-ui seed reset-repo reset-demo talk scenario avatar up up-mock frontend
+        paperclip-logs paperclip-ui down seed reset-repo reset-demo talk scenario avatar up up-mock frontend
 
 help: ## List the commands
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  \033[1m%-18s\033[0m %s\n", $$1, $$2}'
@@ -51,6 +51,10 @@ scenario: ## Automated demo-storyline check on the mock company (own gateway on 
 paperclip-start: ## Start the local Paperclip if it isn't running (setup does this too)
 	@curl -sf "$(PAPERCLIP_URL)/api/health" >/dev/null && echo "Paperclip already running" || \
 		DEMO_REPO="$(DEMO_REPO)" PAPERCLIP_URL="$(PAPERCLIP_URL)" scripts/setup_local.sh
+
+down: ## Stop everything: gateway (PORT), frontend (:5173) and Paperclip
+	@-fuser -k $(PORT)/tcp 5173/tcp >/dev/null 2>&1 && echo "Gateway/frontend stopped" || echo "Gateway/frontend weren't running"
+	@$(MAKE) --no-print-directory paperclip-stop
 
 paperclip-stop: ## Stop the local Paperclip
 	@pkill -f '[p]aperclipai' && echo "Paperclip stopped" || echo "Paperclip wasn't running"

@@ -1327,6 +1327,10 @@ kbd {
   white-space: nowrap;
 }
 
+.zoom-video-notice + .zoom-video-notice {
+  top: 44px; /* video and voice notices together */
+}
+
 .zoom-name {
   position: absolute;
   left: 10px;

@@ -117,6 +117,7 @@ export const CALL_EVENT_TYPES = [
   "avatar.clip",
   "avatar.room",
   "avatar.unavailable",
+  "voice.fallback",
   "call.ended",
 ] as const;
 
@@ -138,6 +139,8 @@ export type CallEvent =
   | { type: "avatar.room"; url: string; token: string; avatar_identity: string }
   /** The live avatar couldn't start (busy: Boson had no free slot); the call continues as plain audio. */
   | { type: "avatar.unavailable"; reason: "busy" | "error" }
+  /** Boson doesn't know this machine's cloned voice (`wanted`), so they speak in the preset `voice`. */
+  | { type: "voice.fallback"; voice: string; wanted: string }
   | { type: "call.ended"; reason: string };
 
 /** Close code the gateway uses when a second call is opened while one is active. */

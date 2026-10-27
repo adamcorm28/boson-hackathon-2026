@@ -66,8 +66,9 @@ else
     paperclip_cmd=(onboard --yes --no-install-service)
   fi
   echo "starting: npx paperclipai ${paperclip_cmd[*]} (log: $PAPERCLIP_LOG)"
+  # PORT is the gateway's (make up exports it); Paperclip would bind to it instead of :3100, so unset it.
   # Redirect the whole background group (not just npx) so no process keeps this script's stdout open.
-  (cd "$HOME" && PAPERCLIP_TELEMETRY_DISABLED=1 exec nohup npx -y paperclipai@latest "${paperclip_cmd[@]}") \
+  (cd "$HOME" && unset PORT && PAPERCLIP_TELEMETRY_DISABLED=1 exec nohup npx -y paperclipai@latest "${paperclip_cmd[@]}") \
     >"$PAPERCLIP_LOG" 2>&1 </dev/null &
   disown
   for _ in $(seq 1 240); do

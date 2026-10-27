@@ -40,6 +40,8 @@ export interface CallState {
   endReason: string | null;
   /** Why the live avatar video isn't showing, if it failed to start. */
   videoNotice: string | null;
+  /** Set when they speak in a preset voice instead of the cloned one this machine is set up for. */
+  voiceNotice: string | null;
 }
 
 export type CallAction =
@@ -62,6 +64,7 @@ export const initialCallState: CallState = {
   micError: null,
   endReason: null,
   videoNotice: null,
+  voiceNotice: null,
 };
 
 const openAgentLine = (lines: CallLine[]) => lines.findLastIndex((l) => l.speaker === "agent" && !l.final);
@@ -151,6 +154,9 @@ export function callReducer(state: CallState, action: CallAction): CallState {
         ...state,
         videoNotice: action.reason === "busy" ? "Video unavailable: Boson's avatars are all busy" : "Video unavailable",
       };
+
+    case "voice.fallback":
+      return { ...state, voiceNotice: `Cloned voice not on this Boson account · using preset "${action.voice}"` };
 
     default:
       return state; // tool.called and anything unknown

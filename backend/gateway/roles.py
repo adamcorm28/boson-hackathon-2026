@@ -37,6 +37,9 @@ class Role:
     desk: str | None = None
     # Optional, for the frontend's contact profiles: what this person is responsible for.
     responsibilities: list[str] = field(default_factory=list)
+    # The role file's preset voice when voice_overrides.yaml swapped in a clone, for when Boson
+    # doesn't know the clone (it belongs to another account): the call falls back to this one.
+    preset_voice: str | None = None
 
     def public(self) -> dict:
         """The GET /roles shape (spec §7a)."""
@@ -94,6 +97,7 @@ def load_roles(roles_dir: Path | None = None, voice_overrides: dict[str, str] | 
             sprite=raw.get("sprite"),
             desk=raw.get("desk"),
             responsibilities=list(responsibilities),
+            preset_voice=raw["voice"] if voices.get(raw["id"], raw["voice"]) != raw["voice"] else None,
         )
         roles[role.id] = role
     return roles

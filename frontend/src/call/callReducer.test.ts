@@ -121,6 +121,12 @@ describe("callReducer", () => {
     const s = callReducer({ ...initialCallState, status: "live", roleId: "ceo" }, { type: "avatar.unavailable", reason: "busy" });
     expect(s.videoNotice).toMatch(/busy/);
   });
+
+  it("voice.fallback says they're not in the cloned voice", () => {
+    const s = callReducer({ ...initialCallState, status: "live", roleId: "ceo" }, { type: "voice.fallback", voice: "marcus", wanted: "voice_abc" });
+    expect(s.voiceNotice).toMatch(/preset "marcus"/);
+    expect(callReducer(s, { type: "dial", roleId: "cfo" }).voiceNotice).toBeNull();
+  });
 });
 
 describe("attachments", () => {

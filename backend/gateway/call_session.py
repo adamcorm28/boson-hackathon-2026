@@ -60,6 +60,12 @@ DELEGATION_NUDGE = (
     "never called delegate_task, so nobody is working on it. Call delegate_task now with the right "
     "assignee, title and brief. After it returns, say only a few words, like \"Done, he's started.\""
 )
+# Cloned voices Boson said it doesn't know (made on another account), so later calls in this
+# gateway go straight to the role's preset voice.
+_REJECTED_VOICES: set[str] = set()
+# Boson checks the voice on every session.update, and a second check right after the first gets
+# "Could not validate voice ...: voices API returned HTTP 429". Wait this long before each retry.
+VOICE_CHECK_RETRY_DELAYS = (1.0, 2.0, 4.0)
 
 
 class Upstream(Protocol):
@@ -94,6 +100,11 @@ class CallSession:
         live_avatar: LiveAvatar | None = None,
     ):
         self.role = role
+        self.voice = role.voice
+        if role.preset_voice and role.voice in _REJECTED_VOICES:
+            self.voice = role.preset_voice
+        self._instructions = ""
+        self._voice_check_retries = 0
         self.client = client_ws
         self.connect_upstream = connect_upstream
         self.ctx = ctx
@@ -134,7 +145,7 @@ class CallSession:
             pending = self.queue.pending()
             briefing = await build_briefing(
                 self.role, self.ctx.company, self.memory.recent_summaries(), pending, self.ctx.roles)
-            instructions = build_instructions(self.role, briefing)
+            instructions = self._instructions = build_instructions(self.role, briefing)
             self._after_greeting = build_instructions(self.role, briefing, greeted=True)
             self.queue.discard({r.task_id for r in pending})  # the briefing delivers them
 
@@ -144,6 +155,8 @@ class CallSession:
             await self._send_upstream(self._session_update(instructions))
             await self._send_upstream({"type": "response.create"})  # the greeting (in the session instructions)
             await self._to_client({"type": "call.started", "role": self.role.id})
+            if self.voice != self.role.voice:
+                await self._notify_voice_fallback()
             self.bus.publish("agent.status", {"role": self.role.id, "state": "on_call"})
 
             tasks = [asyncio.create_task(c) for c in
@@ -198,7 +211,7 @@ class CallSession:
                         "turn_detection": self.role.turn_detection or {"type": "server_vad"},
                         "transcription": {"model": TRANSCRIPTION_MODEL},
                     },
-                    "output": {"format": {"type": "audio/pcm", "rate": 24000}, "voice": self.role.voice},
+                    "output": {"format": {"type": "audio/pcm", "rate": 24000}, "voice": self.voice},
                 },
                 "tools": tools_for(self.role),
             },
@@ -207,7 +220,33 @@ class CallSession:
     # --- io helpers ---------------------------------------------------------------------
 
     async def _send_upstream(self, event: dict) -> None:
+        if self.upstream is None:  # reconnecting with another voice; mic audio meanwhile is dropped
+            return
         await self.upstream.send(json.dumps(event))
+
+    async def _fall_back_to_preset_voice(self) -> None:
+        """Boson ended the session over an unknown cloned voice: start it again with the preset."""
+        log.warning("Boson doesn't know %s's voice %s (cloned on another account?); using the preset %r",
+                    self.role.id, self.voice, self.role.preset_voice)
+        _REJECTED_VOICES.add(self.voice)
+        self.voice = self.role.preset_voice
+        await self._notify_voice_fallback()
+        await self._reconnect(VOICE_CHECK_RETRY_DELAYS[0])  # straight away would hit the voice check's 429
+
+    async def _reconnect(self, delay: float) -> None:
+        """Start a new upstream session (Boson ended this one before the greeting)."""
+        old, self.upstream = self.upstream, None
+        try:
+            await old.close()
+        except Exception:
+            pass
+        await asyncio.sleep(delay)
+        self.upstream = await self.connect_upstream()
+        await self._send_upstream(self._session_update(self._instructions))
+        await self._send_upstream({"type": "response.create"})  # the greeting
+
+    async def _notify_voice_fallback(self) -> None:
+        await self._to_client({"type": "voice.fallback", "voice": self.voice, "wanted": self.role.voice})
 
     async def send_attachment(self, result) -> None:
         """Show a finished task's files in the call window, next to what the agent says about it."""
@@ -285,19 +324,26 @@ class CallSession:
                     return
 
     async def _upstream_loop(self) -> None:
-        try:
-            async for raw in self.upstream:
-                if isinstance(raw, bytes):
-                    continue
-                if await self._handle_upstream(json.loads(raw)):
+        while True:
+            upstream = self.upstream
+            try:
+                async for raw in upstream:
+                    if isinstance(raw, bytes):
+                        continue
+                    if await self._handle_upstream(json.loads(raw)):
+                        return
+                    if self.upstream is not upstream:
+                        break  # reconnected with the preset voice: read the new session
+                else:
+                    self._reason = "upstream_closed"
+                    log.info("upstream closed: code=%s reason=%s", getattr(upstream, "close_code", None),
+                             getattr(upstream, "close_reason", None))
                     return
-            self._reason = "upstream_closed"
-            log.info("upstream closed: code=%s reason=%s", getattr(self.upstream, "close_code", None),
-                     getattr(self.upstream, "close_reason", None))
-        except websockets.ConnectionClosed as e:
-            log.info("upstream closed with error: %s", e)
-            code = e.rcvd.code if e.rcvd else None
-            self._reason = CLOSE_REASONS.get(code, "upstream_closed")
+            except websockets.ConnectionClosed as e:
+                log.info("upstream closed with error: %s", e)
+                code = e.rcvd.code if e.rcvd else None
+                self._reason = CLOSE_REASONS.get(code, "upstream_closed")
+                return
 
     async def _handle_upstream(self, ev: dict) -> bool:
         """Handle one upstream event; returns True when the call should end."""
@@ -360,6 +406,17 @@ class CallSession:
             case "error":
                 err = ev.get("error") or {}
                 log.warning("upstream error: %s", err)
+                if (self.role.preset_voice and self.voice != self.role.preset_voice
+                        and "invalid voice" in str(err.get("message", "")).lower()):
+                    await self._fall_back_to_preset_voice()
+                    return False
+                if ("could not validate voice" in str(err.get("message", "")).lower() and "429" in str(err)
+                        and self._voice_check_retries < len(VOICE_CHECK_RETRY_DELAYS)):
+                    delay = VOICE_CHECK_RETRY_DELAYS[self._voice_check_retries]
+                    self._voice_check_retries += 1
+                    log.warning("Boson's voice check is rate limited; new session in %.0fs", delay)
+                    await self._reconnect(delay)
+                    return False
                 if err.get("code") in FATAL_ERROR_CODES or err.get("type") in FATAL_ERROR_CODES:
                     self._reason = err.get("code") or err.get("type")
                     return True

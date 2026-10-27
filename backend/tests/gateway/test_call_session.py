@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import dataclasses
 import json
 
 import pytest
@@ -9,7 +10,7 @@ from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
 from company.types import TaskResult
-from gateway import app_state, http
+from gateway import app_state, call_session, http
 from gateway.call_session import CallSession
 from gateway.events import EventBus
 from gateway.injector import NotificationQueue
@@ -169,6 +170,70 @@ async def test_greeting_section_swapped_out_after_the_greeting(harness, roles):
     assert updates[1]["session"]["tools"] == updates[0]["session"]["tools"]
     harness.client.disconnect()
     await harness.task
+
+
+async def test_unknown_cloned_voice_falls_back_to_the_preset_and_says_so(harness, roles, monkeypatch):
+    monkeypatch.setattr(call_session, "_REJECTED_VOICES", set())
+    monkeypatch.setattr(call_session, "VOICE_CHECK_RETRY_DELAYS", (0, 0, 0))
+    preset = roles["ceo"].voice
+    roles["ceo"] = dataclasses.replace(roles["ceo"], voice="voice_clone", preset_voice=preset)
+    harness.make("ceo")
+    await started(harness)
+    first = harness.upstream
+    assert first.sent[0]["session"]["audio"]["output"]["voice"] == "voice_clone"
+    assert "voice.fallback" not in harness.client.types()
+
+    harness.upstream = FakeUpstream()  # what the reconnect gets
+    first.feed({"type": "error", "error": {"type": "invalid_request_error", "code": "400", "message":
+                "Session terminated due to Error while handling session update: Invalid voice 'voice_clone': not found"}})
+    await until(lambda: "voice.fallback" in harness.client.types())
+    assert first.closed
+    assert harness.upstream.sent[0]["session"]["audio"]["output"]["voice"] == preset
+    assert harness.upstream.sent[1] == {"type": "response.create"}  # the greeting, in the new voice
+    assert {"type": "voice.fallback", "voice": preset, "wanted": "voice_clone"} in harness.client.json
+    harness.upstream.feed({"type": "response.created"})
+    await until(lambda: "agent.speaking" in harness.client.types())  # reading the new session
+    assert "call.ended" not in harness.client.types()
+    harness.client.disconnect()
+    await harness.task
+
+    # The next call goes straight to the preset, and still says so.
+    harness.upstream, harness.client = FakeUpstream(), FakeClientWS()
+    harness.make("ceo")
+    await started(harness)
+    assert harness.upstream.sent[0]["session"]["audio"]["output"]["voice"] == preset
+    assert {"type": "voice.fallback", "voice": preset, "wanted": "voice_clone"} in harness.client.json
+    harness.client.disconnect()
+    await harness.task
+
+
+async def test_rate_limited_voice_check_retries_with_a_new_session(harness, monkeypatch):
+    monkeypatch.setattr(call_session, "VOICE_CHECK_RETRY_DELAYS", (0, 0))
+    harness.make("ceo")
+    await started(harness)
+    limited = {"type": "error", "error": {"code": "400", "message":
+               "Session terminated due to Error while handling session update: "
+               "Could not validate voice 'marcus': voices API returned HTTP 429"}}
+    for _ in range(2):
+        old, harness.upstream = harness.upstream, FakeUpstream()
+        old.feed(limited)
+        await until(lambda: old.closed and harness.upstream.types() == ["session.update", "response.create"])
+    old, harness.upstream = harness.upstream, FakeUpstream()
+    old.feed(limited)  # out of retries: the call ends
+    old.close_with(websockets.ConnectionClosedOK(None, None))
+    await harness.task
+    assert harness.upstream.sent == []
+    assert harness.client.json[-1]["type"] == "call.ended"
+
+
+async def test_invalid_voice_without_a_preset_ends_the_call(harness):
+    harness.make("ceo")  # no override, so nothing to fall back to
+    await started(harness)
+    harness.upstream.feed({"type": "error", "error": {"code": "400", "message": "Invalid voice 'x': not found"}})
+    harness.upstream.close_with(websockets.ConnectionClosedOK(None, None))
+    await harness.task
+    assert "voice.fallback" not in harness.client.types()
+    assert harness.client.json[-1]["type"] == "call.ended"
 
 
 async def test_audio_delta_forwarded_as_binary(harness):

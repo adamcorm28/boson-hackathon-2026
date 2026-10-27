@@ -93,6 +93,9 @@ def test_voice_overrides_replace_role_voice(tmp_path):
     from gateway.roles import load_voice_overrides
     roles = load_roles(tmp_path, voice_overrides=load_voice_overrides(overrides))
     assert roles["eng_lead"].voice == "voice_abc123"
+    assert roles["eng_lead"].preset_voice == "default"  # the fallback if Boson doesn't know the clone
+    plain = load_roles(tmp_path, voice_overrides={})["eng_lead"]
+    assert plain.voice == "default" and plain.preset_voice is None
     assert load_roles(tmp_path, voice_overrides={})["eng_lead"].voice == "default"
 
 
